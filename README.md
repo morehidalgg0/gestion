@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plataforma SaaS de Gestión Comercial y Facturación AFIP
 
-## Getting Started
+Este proyecto es una plataforma SaaS multi-tenant diseñada para comercios (dietéticas, almacenes, kioscos) en Argentina. Permite a los comerciantes gestionar su punto de venta (POS), controlar su stock (por peso o por unidad), registrar cuentas corrientes de clientes (fiados) y emitir facturas electrónicas válidas ante AFIP (ARCA) de forma automatizada. El sistema incluye una integración de suscripción mensual a través de Mercado Pago.
 
-First, run the development server:
+## Características Clave
+- **Multi-tenancy estricto:** Aislamiento de datos comerciales por `empresaId`.
+- **Facturación Electrónica AFIP (WSFEv1):** Generación automática de comprobantes A, B y C. Modo demo interno que no requiere certificados para pruebas iniciales, y conexión real con certificados encriptados en la base de datos (AES-256-GCM).
+- **Límites de Suscripción:** Bloqueos automáticos si una empresa supera el límite de ventas mensuales o de usuarios del plan asignado.
+- **Mercado Pago Integrado:** Pagos recurrentes de membresías, con un simulador de checkout local activable vía `DEMO_MODE=true`.
+- **Estructura Serverless:** Un solo repositorio con Next.js (App Router), TypeScript y Prisma ORM. Listo para desplegar en Vercel con un solo click.
 
+---
+
+## 🛠️ Instalación y Configuración Local
+
+### 1. Requisitos Previos
+- Node.js (v18 o superior)
+- Una base de datos PostgreSQL activa (puede ser local o en la nube mediante Neon/Supabase)
+
+### 2. Clonar e Instalar Dependencias
+Instalar los paquetes del proyecto:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Variables de Entorno
+Copiar el archivo `.env.example` como `.env` en la raíz del proyecto:
+```bash
+cp .env.example .env
+```
+Abrir el archivo `.env` y configurar:
+- `DATABASE_URL`: La cadena de conexión de tu Postgres.
+- `JWT_SECRET`: Una clave de firma larga.
+- `ENCRYPTION_KEY`: Una cadena hexadecimal de 64 caracteres (32 bytes) para el cifrado AES-256-GCM. Podés generar una rápida ejecutando:
+  ```bash
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  ```
+- Mantener `DEMO_MODE="true"` para probar el cobro de suscripción y facturación AFIP sin claves reales.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Inicializar Base de Datos y Semillado (Seed)
+Ejecutar las migraciones de Prisma para crear las tablas en tu base de datos:
+```bash
+npx prisma migrate dev --name init
+```
+Una vez terminadas las migraciones, ejecutar el script de semillado para poblar los planes comerciales básicos, el usuario superadmin y los productos/empresa demo:
+```bash
+npx prisma db seed
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 5. Iniciar Servidor de Desarrollo
+Correr la aplicación de manera local:
+```bash
+npm run dev
+```
+La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🔑 Cuentas de Acceso Rápidas (Creadas por el Seed)
+- **Portal de Comercio Demo:**
+  - **Usuario:** `demo@dietetica.com`
+  - **Contraseña:** `demo123`
+  - *Acceso directo a la caja registradora, productos de prueba con bajo stock, cuentas corrientes e historial.*
+- **Portal de Superadministrador (Dueño de la plataforma):**
+  - **Usuario:** `superadmin@dietetica.com`
+  - **Contraseña:** `admin123`
+  - *Permite ver métricas de uso global, suspender cuentas de comercios o cambiar planes de suscripción.*
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 Despliegue en Vercel (Producción)
 
-## Deploy on Vercel
+Este proyecto está diseñado para funcionar de manera óptima en la infraestructura serverless de Vercel.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Paso 1: Crear la Base de Datos en Neon o Vercel Postgres
+1. Creá una cuenta en [Neon.tech](https://neon.tech) o iniciá sesión en Vercel.
+2. Crea un nuevo proyecto PostgreSQL.
+3. Copia la cadena de conexión de conexión provista (`postgres://...`).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Paso 2: Conectar el repositorio y configurar variables en Vercel
+1. Crea un repositorio en GitHub con tu código y sube tu proyecto.
+2. Ve al panel de control de Vercel y haz clic en **"Add New"** -> **"Project"**.
+3. Importa tu repositorio de GitHub.
+4. Despliega la pestaña **Environment Variables** y añade las siguientes claves:
+   - `DATABASE_URL`: La URL copiada en el Paso 1.
+   - `JWT_SECRET`: Tu clave secreta aleatoria.
+   - `ENCRYPTION_KEY`: La clave de cifrado hexadecimal de 64 caracteres.
+   - `MP_ACCESS_TOKEN`: Tu token de producción/prueba real de Mercado Pago.
+   - `MP_WEBHOOK_SECRET`: Firma para validar notificaciones de Mercado Pago.
+   - `DEMO_MODE`: Cambiar a `false`.
+   - `NEXT_PUBLIC_SITE_URL`: La dirección final de tu despliegue (ej. `https://mi-comercio-saas.vercel.app`).
+5. En la configuración de build y desarrollo, Vercel ejecutará automáticamente `prisma generate` durante el empaquetado.
+
+### Paso 3: Correr migraciones en producción
+Una vez que el despliegue en Vercel sea exitoso, debes correr las migraciones contra tu base de datos de producción desde tu equipo local apuntando temporalmente tu archivo `.env` a la URL de producción, o ejecutando:
+```bash
+npx prisma db push
+npx prisma db seed
+```
+¡Tu plataforma SaaS estará lista y operativa en producción!

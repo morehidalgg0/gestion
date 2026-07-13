@@ -1,0 +1,165 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Empresa {
+  id           String             @id @default(uuid())
+  nombre       String             // Nombre comercial de la empresa
+  cuit         String             @unique
+  condicionIva String             // 'Responsable Inscripto' o 'Monotributista'
+  estado       String             @default("PENDIENTE_PAGO") // 'ACTIVO', 'INACTIVO', 'PENDIENTE_PAGO'
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  usuarios     Usuario[]
+  productos    Producto[]
+  clientes     Cliente[]
+  ventas       Venta[]
+  configAfip   ConfiguracionAfip?
+  suscripcion  Suscripcion?
+  movimientos  MovimientoCuentaCorriente[]
+}
+
+model Usuario {
+  id           String    @id @default(uuid())
+  nombre       String
+  email        String    @unique
+  passwordHash String
+  rol          String    // 'SUPERADMIN', 'OWNER', 'EMPLOYEE'
+  empresaId    String?   // Nulo si el rol es SUPERADMIN
+  empresa      Empresa?  @relation(fields: [empresaId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Plan {
+  id                    String        @id @default(uuid())
+  nombre                String        // 'Prueba', 'Básico', 'Premium'
+  precioMensual         Decimal       @db.Decimal(10, 2)
+  limiteVentasMensuales Int           // 0 indica sin límite
+  limiteUsuarios        Int           // Cantidad máxima de usuarios admitida
+  suscripciones         Suscripcion[]
+}
+
+model Suscripcion {
+  id               String   @id @default(uuid())
+  empresaId        String   @unique
+  empresa          Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  planId           String
+  plan             Plan     @relation(fields: [planId], references: [id])
+  mpPreapprovalId  String?  // ID de la suscripción/preapproval en Mercado Pago
+  estado           String   @default("PENDIENTE") // 'authorized', 'paused', 'cancelled', 'pending'
+  fechaInicio      DateTime @default(now())
+  fechaVencimiento DateTime
+}
+
+model ConfiguracionAfip {
+  id                    String   @id @default(uuid())
+  empresaId             String   @unique
+  empresa               Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  cuit                  String
+  razonSocial           String
+  condicionIva          String
+  puntoVenta            Int      @default(1)
+  modo                  String   @default("demo") // 'demo', 'homologacion', 'produccion'
+  certificadoEncriptado String?  @db.Text         // CRT encriptado
+  claveEncriptada       String?  @db.Text         // private KEY encriptada
+  iv                    String?                   // Vector de inicialización para AES-256-GCM
+}
+
+model Producto {
+  id            String      @id @default(uuid())
+  empresaId     String
+  empresa       Empresa     @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  codigo        String
+  nombre        String
+  categoria     String
+  unidad        String      // 'kg', 'g', 'unidad'
+  precioCosto   Decimal     @db.Decimal(10, 2)
+  precioVenta   Decimal     @db.Decimal(10, 2)
+  ivaPorcentaje Decimal     @db.Decimal(5, 2)
+  stockActual   Decimal     @db.Decimal(10, 3) // Decimal para gramos
+  stockMinimo   Decimal     @db.Decimal(10, 3)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  ventaItems    VentaItem[]
+
+  @@unique([empresaId, codigo])
+}
+
+model Cliente {
+  id                   String                       @id @default(uuid())
+  empresaId            String
+  empresa              Empresa                      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  tipoDoc              String                       // 'DNI', 'CUIT', '99' (Sin Identificar)
+  nroDoc               String
+  razonSocial          String
+  condicionIva         String                       // 'Consumidor Final', 'Responsable Inscripto', 'Monotributista', 'Exento'
+  direccion            String?
+  telefono             String?
+  email                String?
+  limiteCredito        Decimal?                     @db.Decimal(10, 2)
+  saldoCuentaCorriente Decimal                      @default(0.00) @db.Decimal(10, 2)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  ventas               Venta[]
+  movimientos          MovimientoCuentaCorriente[]
+
+  @@unique([empresaId, tipoDoc, nroDoc])
+}
+
+model Venta {
+  id                String                     @id @default(uuid())
+  empresaId         String
+  empresa           Empresa                    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  fecha             DateTime                   @default(now())
+  clienteId         String
+  cliente           Cliente                    @relation(fields: [clienteId], references: [id])
+  tipoComprobante   String                     // 'Factura A', 'Factura B', 'Factura C'
+  puntoVenta        Int
+  numeroComprobante Int
+  subtotal          Decimal                    @db.Decimal(10, 2)
+  iva               Decimal                    @db.Decimal(10, 2)
+  total             Decimal                    @db.Decimal(10, 2)
+  formaPago         String                     // 'Efectivo', 'Tarjeta', 'Transferencia', 'Cuenta Corriente'
+  estado            String                     // 'COMPLETADO', 'RECHAZADO_AFIP', 'DEMO'
+  cae               String?
+  caeVencimiento    DateTime?
+  mensajeAfip       String?                    // Registra errores de AFIP
+  items             VentaItem[]
+  movimientoCc      MovimientoCuentaCorriente?
+  createdAt         DateTime                   @default(now())
+
+  @@unique([empresaId, tipoComprobante, puntoVenta, numeroComprobante])
+}
+
+model VentaItem {
+  id             String   @id @default(uuid())
+  ventaId        String
+  venta          Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  productoId     String
+  producto       Producto @relation(fields: [productoId], references: [id])
+  productoName   String   // Copia de seguridad del nombre al momento de la venta
+  cantidad       Decimal  @db.Decimal(10, 3)
+  precioUnitario Decimal  @db.Decimal(10, 2)
+  subtotal       Decimal  @db.Decimal(10, 2)
+}
+
+model MovimientoCuentaCorriente {
+  id              String    @id @default(uuid())
+  empresaId       String
+  empresa         Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  clienteId       String
+  cliente         Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  fecha           DateTime  @default(now())
+  tipo            String    // 'DEBE', 'HABER'
+  concepto        String    // Detalle de la transacción
+  importe         Decimal   @db.Decimal(10, 2)
+  ventaId         String?   @unique
+  venta           Venta?    @relation(fields: [ventaId], references: [id])
+  saldoResultante Decimal   @db.Decimal(10, 2)
+}
