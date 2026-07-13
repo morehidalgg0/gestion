@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyPassword, setSessionCookie } from '@/lib/auth';
+import { setSessionCookie } from '@/lib/auth';
+import { verifyPassword } from '@/lib/password';
 
 export async function POST(req: NextRequest) {
   try {
