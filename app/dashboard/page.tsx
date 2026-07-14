@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ShoppingCart, AlertTriangle, Users, DollarSign, Package } from 'lucide-react';
 
 export default function DashboardHome() {
+  const [session, setSession] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -12,6 +13,60 @@ export default function DashboardHome() {
   useEffect(() => {
     async function loadStats() {
       try {
+        const sessionRes = await fetch('/api/auth/session');
+        const sessionData = await sessionRes.json();
+        if (!sessionData.authenticated) {
+          throw new Error('No se pudo validar la sesión.');
+        }
+
+        setSession(sessionData.user);
+
+        if (sessionData.user.rol === 'EMPLOYEE') {
+          const [ventasRes, productosRes] = await Promise.all([
+            fetch('/api/tenant/ventas'),
+            fetch('/api/tenant/productos'),
+          ]);
+
+          if (!ventasRes.ok || !productosRes.ok) {
+            throw new Error('Error al cargar estadísticas.');
+          }
+
+          const ventas = await ventasRes.json();
+          const productos = await productosRes.json();
+          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+          const ventasHoy = Array.isArray(ventas)
+            ? ventas.filter((venta: any) => new Date(venta.fecha).toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }) === today && venta.estado !== 'RECHAZADO_AFIP')
+            : [];
+          const totalVentas = ventasHoy.reduce((acc: number, venta: any) => {
+            const total = Number(venta.total) || 0;
+            return acc + (venta.tipoComprobante?.startsWith('Nota de Crédito') ? -total : total);
+          }, 0);
+          const lowStock = Array.isArray(productos)
+            ? productos
+                .filter((prod: any) => Number(prod.stockActual) <= Number(prod.stockMinimo))
+                .sort((a: any, b: any) => Number(a.stockActual) - Number(b.stockActual))
+                .slice(0, 10)
+                .map((prod: any) => ({
+                  id: prod.id,
+                  codigo: prod.codigo,
+                  nombre: prod.nombre,
+                  stock: Number(prod.stockActual),
+                  min: Number(prod.stockMinimo),
+                  unidad: prod.unidad,
+                }))
+            : [];
+
+          setData({
+            stats: {
+              totalVentas,
+              cantidadVentas: ventasHoy.length,
+            },
+            debtors: [],
+            lowStock,
+          });
+          return;
+        }
+
         const res = await fetch('/api/tenant/reportes?periodo=dia');
         if (!res.ok) throw new Error('Error al cargar estadísticas.');
         const statsData = await res.json();
@@ -147,12 +202,16 @@ export default function DashboardHome() {
               <Link href="/dashboard/ventas" className="btn btn-primary" style={{ width: '100%', padding: '0.85rem' }}>
                 🛒 Iniciar Nueva Venta (POS)
               </Link>
-              <Link href="/dashboard/cuentas-corrientes" className="btn btn-secondary" style={{ width: '100%', padding: '0.85rem' }}>
-                💵 Registrar Pago de Cliente
-              </Link>
-              <Link href="/dashboard/config-afip" className="btn btn-secondary" style={{ width: '100%', padding: '0.85rem' }}>
-                ⚙️ Configurar AFIP / Certs
-              </Link>
+              {session?.rol !== 'EMPLOYEE' && (
+                <Link href="/dashboard/cuentas-corrientes" className="btn btn-secondary" style={{ width: '100%', padding: '0.85rem' }}>
+                  💵 Registrar Pago de Cliente
+                </Link>
+              )}
+              {session?.rol !== 'EMPLOYEE' && (
+                <Link href="/dashboard/config-afip" className="btn btn-secondary" style={{ width: '100%', padding: '0.85rem' }}>
+                  ⚙️ Configurar AFIP / Certs
+                </Link>
+              )}
             </div>
           </div>
 
