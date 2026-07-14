@@ -14,7 +14,7 @@ export interface InvoiceRequest {
   razonSocialEmisor: string;
   condicionIvaEmisor: 'Responsable Inscripto' | 'Monotributista';
   puntoVenta: number;
-  tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C' | 'Factura X';
+  tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C' | 'Factura X' | 'Nota de Crédito A' | 'Nota de Crédito B' | 'Nota de Crédito C' | 'Nota de Crédito X';
   clienteTipoDoc: string; // 'DNI', 'CUIT', '99' (Sin Identificar)
   clienteNroDoc: string;
   items: InvoiceItem[];
@@ -22,6 +22,11 @@ export interface InvoiceRequest {
   certificadoEncriptado?: string | null;
   claveEncriptada?: string | null;
   iv?: string | null;
+  comprobanteAsociado?: {
+    tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C';
+    puntoVenta: number;
+    numeroComprobante: number;
+  };
 }
 
 export interface InvoiceResult {
@@ -35,12 +40,23 @@ export interface InvoiceResult {
 /**
  * Maps standard invoice types to AFIP numeric codes.
  */
-function getCbteTipoCode(tipo: 'Factura A' | 'Factura B' | 'Factura C'): number {
+function getCbteTipoCode(tipo: 'Factura A' | 'Factura B' | 'Factura C' | 'Nota de Crédito A' | 'Nota de Crédito B' | 'Nota de Crédito C'): number {
   switch (tipo) {
     case 'Factura A': return 1;
     case 'Factura B': return 6;
     case 'Factura C': return 11;
+    case 'Nota de Crédito A': return 3;
+    case 'Nota de Crédito B': return 8;
+    case 'Nota de Crédito C': return 13;
   }
+}
+
+function isTipoC(tipo: string): boolean {
+  return tipo === 'Factura C' || tipo === 'Nota de Crédito C';
+}
+
+function isNotaCredito(tipo: string): boolean {
+  return tipo.startsWith('Nota de Crédito');
 }
 
 /**
@@ -60,7 +76,7 @@ function getDocTipoCode(tipo: string): number {
  * Otherwise, it communicates with ARCA (AFIP) Web Services.
  */
 export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult> {
-  if (req.tipoComprobante === 'Factura X') {
+  if (req.tipoComprobante === 'Factura X' || req.tipoComprobante === 'Nota de Crédito X') {
     return {
       estado: 'DEMO',
       numeroComprobante: 0,
@@ -85,7 +101,7 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
   for (const item of req.items) {
     const itemTotal = item.cantidad * item.precioUnitario;
     
-    if (cbteTipo === 11) {
+    if (isTipoC(req.tipoComprobante)) {
       // Monotributista issues Factura C (no discriminated IVA, total is taxed as net)
       impNeto += itemTotal;
     } else {
@@ -112,7 +128,7 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
     }
   }
 
-  if (cbteTipo !== 11) {
+  if (!isTipoC(req.tipoComprobante)) {
     impNeto = neto21 + neto105;
     impIva = iva21 + iva105;
   }
@@ -178,8 +194,16 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
       MonCotiz: 1,
     };
 
-    // Discriminate IVA details if not Factura C
-    if (cbteTipo !== 11) {
+    if (isNotaCredito(req.tipoComprobante) && req.comprobanteAsociado) {
+      data.CbtesAsoc = [{
+        Tipo: getCbteTipoCode(req.comprobanteAsociado.tipoComprobante),
+        PtoVta: req.comprobanteAsociado.puntoVenta,
+        Nro: req.comprobanteAsociado.numeroComprobante,
+      }];
+    }
+
+    // Discriminate IVA details if not Factura C / Nota de Crédito C
+    if (!isTipoC(req.tipoComprobante)) {
       const ivaArray: any[] = [];
       if (neto21 > 0) {
         ivaArray.push({

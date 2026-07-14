@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { FileText, Printer, Search } from 'lucide-react';
+import { FileText, Printer, RotateCcw, Search } from 'lucide-react';
 
 type Venta = {
   id: string;
@@ -43,11 +43,24 @@ function getEstadoBadge(estado: string) {
 }
 
 export default function ComprobantesPage() {
+  const [session, setSession] = useState<any>(null);
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [issuingCreditNoteId, setIssuingCreditNoteId] = useState('');
   const [search, setSearch] = useState('');
   const [estado, setEstado] = useState('TODOS');
+
+  const loadVentas = async () => {
+    const ventasRes = await fetch('/api/tenant/ventas');
+    if (!ventasRes.ok) {
+      const data = await ventasRes.json().catch(() => ({}));
+      throw new Error(data.error || 'No se pudo cargar el historial de comprobantes.');
+    }
+
+    const ventasData = await ventasRes.json();
+    setVentas(Array.isArray(ventasData) ? ventasData : []);
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -60,15 +73,9 @@ export default function ComprobantesPage() {
         if (!sessionData.authenticated) {
           throw new Error('No se pudo validar la sesión.');
         }
+        setSession(sessionData.user);
 
-        const ventasRes = await fetch('/api/tenant/ventas');
-        if (!ventasRes.ok) {
-          const data = await ventasRes.json().catch(() => ({}));
-          throw new Error(data.error || 'No se pudo cargar el historial de comprobantes.');
-        }
-
-        const ventasData = await ventasRes.json();
-        setVentas(Array.isArray(ventasData) ? ventasData : []);
+        await loadVentas();
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -78,6 +85,48 @@ export default function ComprobantesPage() {
 
     loadData();
   }, []);
+
+  const hasCreditNote = (venta: Venta) => {
+    return ventas.some((item) =>
+      item.tipoComprobante.startsWith('Nota de Crédito') &&
+      item.mensajeAfip?.includes(`Comprobante original ID: ${venta.id}`)
+    );
+  };
+
+  const canIssueCreditNote = (venta: Venta) => {
+    return session?.rol === 'OWNER' &&
+      venta.estado !== 'RECHAZADO_AFIP' &&
+      venta.tipoComprobante.startsWith('Factura') &&
+      !hasCreditNote(venta);
+  };
+
+  const handleEmitCreditNote = async (venta: Venta) => {
+    const confirmed = window.confirm(
+      `Vas a emitir una nota de crédito total para ${venta.tipoComprobante} ${formatVoucherNumber(venta)}. ¿Continuar?`
+    );
+    if (!confirmed) return;
+
+    setIssuingCreditNoteId(venta.id);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/tenant/ventas/${venta.id}/nota-credito`, {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo emitir la nota de crédito.');
+      }
+
+      await loadVentas();
+      window.open(`/dashboard/ventas/${data.venta.id}/print`, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIssuingCreditNoteId('');
+    }
+  };
 
   const filteredVentas = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -102,7 +151,7 @@ export default function ComprobantesPage() {
     return filteredVentas.reduce(
       (acc, venta) => {
         if (venta.estado !== 'RECHAZADO_AFIP') {
-          acc.total += Number(venta.total);
+          acc.total += venta.tipoComprobante.startsWith('Nota de Crédito') ? -Number(venta.total) : Number(venta.total);
         }
         acc.count += 1;
         return acc;
@@ -222,7 +271,8 @@ export default function ComprobantesPage() {
                   )}
                 </td>
                 <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(venta.total)}</td>
-                <td style={{ textAlign: 'center' }}>
+                <td>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                   {venta.estado === 'RECHAZADO_AFIP' ? (
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Sin impresión</span>
                   ) : (
@@ -237,6 +287,21 @@ export default function ComprobantesPage() {
                       Ver / Imprimir
                     </a>
                   )}
+                  {canIssueCreditNote(venta) && (
+                    <button
+                      onClick={() => handleEmitCreditNote(venta)}
+                      className="btn btn-outline btn-sm"
+                      disabled={issuingCreditNoteId === venta.id}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <RotateCcw size={14} />
+                      {issuingCreditNoteId === venta.id ? 'Emitiendo...' : 'Nota crédito'}
+                    </button>
+                  )}
+                  {venta.tipoComprobante.startsWith('Factura') && hasCreditNote(venta) && (
+                    <span className="badge badge-info">Nota emitida</span>
+                  )}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -49,19 +49,30 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
   let title = 'DOCUMENTO NO VÁLIDO COMO FACTURA';
   let subtitle = 'COMPROBANTE CLASE "X"';
   
-  if (venta.tipoComprobante === 'Factura A') {
+  if (venta.tipoComprobante === 'Factura A' || venta.tipoComprobante === 'Nota de Crédito A') {
     letter = 'A';
-    title = 'FACTURA';
+    title = venta.tipoComprobante.startsWith('Nota') ? 'NOTA DE CRÉDITO' : 'FACTURA';
     subtitle = 'COMPROBANTE CLASE "A"';
-  } else if (venta.tipoComprobante === 'Factura B') {
+  } else if (venta.tipoComprobante === 'Factura B' || venta.tipoComprobante === 'Nota de Crédito B') {
     letter = 'B';
-    title = 'FACTURA';
+    title = venta.tipoComprobante.startsWith('Nota') ? 'NOTA DE CRÉDITO' : 'FACTURA';
     subtitle = 'COMPROBANTE CLASE "B"';
-  } else if (venta.tipoComprobante === 'Factura C') {
+  } else if (venta.tipoComprobante === 'Factura C' || venta.tipoComprobante === 'Nota de Crédito C') {
     letter = 'C';
-    title = 'FACTURA';
+    title = venta.tipoComprobante.startsWith('Nota') ? 'NOTA DE CRÉDITO' : 'FACTURA';
     subtitle = 'COMPROBANTE CLASE "C"';
+  } else if (venta.tipoComprobante === 'Nota de Crédito X') {
+    title = 'NOTA DE CRÉDITO';
+    subtitle = 'COMPROBANTE CLASE "X"';
   }
+
+  const code = venta.tipoComprobante === 'Factura A' ? '01'
+    : venta.tipoComprobante === 'Nota de Crédito A' ? '03'
+    : venta.tipoComprobante === 'Factura B' ? '06'
+    : venta.tipoComprobante === 'Nota de Crédito B' ? '08'
+    : venta.tipoComprobante === 'Factura C' ? '11'
+    : venta.tipoComprobante === 'Nota de Crédito C' ? '13'
+    : '99';
 
   const formattedDocNum = `${venta.puntoVenta.toString().padStart(4, '0')}-${venta.numeroComprobante.toString().padStart(8, '0')}`;
   const fechaHora = new Date(venta.createdAt);
@@ -133,7 +144,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             lineHeight: 1
           }}>
             {letter}
-            <span style={{ fontSize: '0.45rem', textTransform: 'uppercase' }}>cod. {letter === 'A' ? '01' : letter === 'B' ? '06' : letter === 'C' ? '11' : '99'}</span>
+            <span style={{ fontSize: '0.45rem', textTransform: 'uppercase' }}>cod. {code}</span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
