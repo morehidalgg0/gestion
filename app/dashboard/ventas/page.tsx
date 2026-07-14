@@ -17,6 +17,12 @@ export default function PosPage() {
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [formaPago, setFormaPago] = useState('Efectivo');
   const [tipoComprobanteSeleccionado, setTipoComprobanteSeleccionado] = useState('auto');
+  const [facturacionTipoDoc, setFacturacionTipoDoc] = useState('CUIT');
+  const [facturacionNroDoc, setFacturacionNroDoc] = useState('');
+  const [facturacionRazonSocial, setFacturacionRazonSocial] = useState('');
+  const [facturacionCondicionIva, setFacturacionCondicionIva] = useState('Responsable Inscripto');
+  const [facturacionDireccion, setFacturacionDireccion] = useState('');
+  const [facturacionEmail, setFacturacionEmail] = useState('');
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -80,6 +86,19 @@ export default function PosPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const requiereDatosFiscales = ['Factura A', 'Factura B', 'Factura C'].includes(tipoComprobanteSeleccionado);
+
+  useEffect(() => {
+    if (tipoComprobanteSeleccionado === 'Factura A') {
+      setFacturacionTipoDoc('CUIT');
+      setFacturacionCondicionIva('Responsable Inscripto');
+    } else if (tipoComprobanteSeleccionado === 'Factura B') {
+      setFacturacionCondicionIva('Consumidor Final');
+    } else if (tipoComprobanteSeleccionado === 'Factura C') {
+      setFacturacionCondicionIva('Monotributista');
+    }
+  }, [tipoComprobanteSeleccionado]);
 
   const addToCart = (product: any) => {
     if (cajaCerrada.cerrado) {
@@ -205,6 +224,11 @@ export default function PosPage() {
       return;
     }
 
+    if (requiereDatosFiscales && (!facturacionNroDoc.trim() || !facturacionRazonSocial.trim())) {
+      setErrorMessage('Completá documento y razón social para emitir Factura A/B/C.');
+      return;
+    }
+
     setSubmitting(true);
     setErrorMessage('');
 
@@ -215,7 +239,15 @@ export default function PosPage() {
         body: JSON.stringify({
           clienteId: selectedClienteId,
           formaPago,
-          tipoComprobante: tipoComprobanteSeleccionado === 'Factura X' ? 'Factura X' : undefined,
+          tipoComprobante: tipoComprobanteSeleccionado === 'auto' ? undefined : tipoComprobanteSeleccionado,
+          datosFacturacion: requiereDatosFiscales ? {
+            tipoDoc: facturacionTipoDoc,
+            nroDoc: facturacionNroDoc,
+            razonSocial: facturacionRazonSocial,
+            condicionIva: facturacionCondicionIva,
+            direccion: facturacionDireccion,
+            email: facturacionEmail,
+          } : undefined,
           items: cart.map((item) => ({
             productoId: item.productoId,
             cantidad: item.cantidad,
@@ -420,9 +452,76 @@ export default function PosPage() {
                   disabled={cajaCerrada.cerrado}
                 >
                   <option value="auto">📄 AFIP Fiscal (Automático A/B/C)</option>
+                  <option value="Factura A">Factura A</option>
+                  <option value="Factura B">Factura B</option>
+                  <option value="Factura C">Factura C</option>
                   <option value="Factura X">❌ Ticket X (No Fiscal / Factura X)</option>
                 </select>
               </div>
+
+              {requiereDatosFiscales && (
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.75rem', marginBottom: '0.75rem', backgroundColor: 'var(--bg-secondary)' }}>
+                  <strong style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.65rem' }}>Datos fiscales del receptor</strong>
+                  <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <select
+                      className="form-select"
+                      value={facturacionTipoDoc}
+                      onChange={(e) => setFacturacionTipoDoc(e.target.value)}
+                      disabled={cajaCerrada.cerrado || tipoComprobanteSeleccionado === 'Factura A'}
+                    >
+                      <option value="CUIT">CUIT</option>
+                      <option value="DNI">DNI</option>
+                      <option value="99">Sin identificar</option>
+                    </select>
+                    <input
+                      className="form-input"
+                      placeholder={facturacionTipoDoc === 'CUIT' ? 'CUIT sin guiones' : 'Número documento'}
+                      value={facturacionNroDoc}
+                      onChange={(e) => setFacturacionNroDoc(e.target.value)}
+                      disabled={cajaCerrada.cerrado}
+                    />
+                  </div>
+                  <input
+                    className="form-input"
+                    placeholder="Razón social / Nombre completo"
+                    value={facturacionRazonSocial}
+                    onChange={(e) => setFacturacionRazonSocial(e.target.value)}
+                    disabled={cajaCerrada.cerrado}
+                    style={{ marginBottom: '0.5rem' }}
+                  />
+                  <select
+                    className="form-select"
+                    value={facturacionCondicionIva}
+                    onChange={(e) => setFacturacionCondicionIva(e.target.value)}
+                    disabled={cajaCerrada.cerrado || tipoComprobanteSeleccionado === 'Factura A'}
+                    style={{ marginBottom: '0.5rem' }}
+                  >
+                    <option value="Consumidor Final">Consumidor Final</option>
+                    <option value="Responsable Inscripto">Responsable Inscripto</option>
+                    <option value="Monotributista">Monotributista</option>
+                    <option value="Exento">Exento</option>
+                  </select>
+                  <input
+                    className="form-input"
+                    placeholder="Dirección fiscal (opcional)"
+                    value={facturacionDireccion}
+                    onChange={(e) => setFacturacionDireccion(e.target.value)}
+                    disabled={cajaCerrada.cerrado}
+                    style={{ marginBottom: '0.5rem' }}
+                  />
+                  <input
+                    className="form-input"
+                    type="email"
+                    placeholder="Email (opcional)"
+                    value={facturacionEmail}
+                    onChange={(e) => setFacturacionEmail(e.target.value)}
+                    disabled={cajaCerrada.cerrado}
+                  />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                    Si el documento ya existe, se usa el cliente registrado; si no existe, se crea automáticamente.
+                  </p>
+                </div>
+              )}
 
               {/* Tax totals */}
               <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>

@@ -131,19 +131,68 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse input
-    const { clienteId, formaPago, items, tipoComprobante: manualTipoComprobante } = await req.json();
+    const { clienteId, formaPago, items, tipoComprobante: manualTipoComprobante, datosFacturacion } = await req.json();
 
     if (!clienteId || !formaPago || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Faltan campos obligatorios para registrar la venta.' }, { status: 400 });
     }
 
     // 3. Load client info
-    const cliente = await prisma.cliente.findUnique({
+    let cliente: any = await prisma.cliente.findUnique({
       where: { id: clienteId },
     });
 
     if (!cliente || cliente.empresaId !== empresaId) {
       return NextResponse.json({ error: 'Cliente no encontrado.' }, { status: 404 });
+    }
+
+    const tiposFacturaManual = ['Factura A', 'Factura B', 'Factura C'];
+    if (tiposFacturaManual.includes(manualTipoComprobante)) {
+      if (!datosFacturacion?.tipoDoc || !datosFacturacion?.nroDoc || !datosFacturacion?.razonSocial || !datosFacturacion?.condicionIva) {
+        return NextResponse.json(
+          { error: 'Para Factura A/B/C tenés que completar tipo de documento, número, razón social y condición IVA.' },
+          { status: 400 }
+        );
+      }
+
+      if (manualTipoComprobante === 'Factura A' && (datosFacturacion.tipoDoc !== 'CUIT' || datosFacturacion.condicionIva !== 'Responsable Inscripto')) {
+        return NextResponse.json(
+          { error: 'Para Factura A el receptor debe tener CUIT y condición IVA Responsable Inscripto.' },
+          { status: 400 }
+        );
+      }
+
+      if (manualTipoComprobante === 'Factura C' && empresa.condicionIva !== 'Monotributista') {
+        return NextResponse.json(
+          { error: 'La Factura C corresponde a emisores Monotributistas.' },
+          { status: 400 }
+        );
+      }
+
+      const normalizedDoc = String(datosFacturacion.nroDoc).replace(/\D/g, '') || String(datosFacturacion.nroDoc).trim();
+      const existingCliente = datosFacturacion.tipoDoc === '99'
+        ? null
+        : await prisma.cliente.findFirst({
+            where: {
+              empresaId,
+              tipoDoc: datosFacturacion.tipoDoc,
+              nroDoc: normalizedDoc,
+            },
+          });
+
+      cliente = existingCliente || await prisma.cliente.create({
+        data: {
+          empresaId,
+          tipoDoc: datosFacturacion.tipoDoc,
+          nroDoc: normalizedDoc,
+          razonSocial: datosFacturacion.razonSocial,
+          condicionIva: datosFacturacion.condicionIva,
+          direccion: datosFacturacion.direccion || '',
+          email: datosFacturacion.email || '',
+          telefono: '',
+          saldoCuentaCorriente: 0,
+        },
+      });
     }
 
     // 4. Load products and check stock
@@ -214,7 +263,9 @@ export async function POST(req: NextRequest) {
 
     // 6. Determine Invoice Type (Fiscal A/B/C or Manual Non-Fiscal X)
     let tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C' | 'Factura X' = 'Factura B';
-    if (manualTipoComprobante === 'Factura X') {
+    if (tiposFacturaManual.includes(manualTipoComprobante)) {
+      tipoComprobante = manualTipoComprobante;
+    } else if (manualTipoComprobante === 'Factura X') {
       tipoComprobante = 'Factura X';
     } else if (empresa.condicionIva === 'Monotributista') {
       tipoComprobante = 'Factura C';
@@ -260,7 +311,7 @@ export async function POST(req: NextRequest) {
         data: {
           empresaId,
           usuarioId,
-          clienteId,
+          clienteId: cliente.id,
           tipoComprobante,
           puntoVenta: configAfip.puntoVenta,
           numeroComprobante: 0,
@@ -331,7 +382,7 @@ export async function POST(req: NextRequest) {
         data: {
           empresaId,
           usuarioId,
-          clienteId,
+          clienteId: cliente.id,
           tipoComprobante,
           puntoVenta: configAfip.puntoVenta,
           numeroComprobante: finalVoucherNumber,
@@ -362,7 +413,7 @@ export async function POST(req: NextRequest) {
       // 10.3 Update current account if sold on credit
       if (formaPago === 'Cuenta Corriente') {
         const clientAfterUpdate = await tx.cliente.update({
-          where: { id: clienteId },
+          where: { id: cliente.id },
           data: {
             saldoCuentaCorriente: { increment: totalVenta },
           },
@@ -372,7 +423,7 @@ export async function POST(req: NextRequest) {
         await tx.movimientoCuentaCorriente.create({
           data: {
             empresaId,
-            clienteId,
+            clienteId: cliente.id,
             tipo: 'DEBE',
             concepto: `${tipoComprobante} Nº ${configAfip.puntoVenta.toString().padStart(4, '0')}-${finalVoucherNumber
               .toString()
