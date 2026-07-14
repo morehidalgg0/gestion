@@ -13,10 +13,13 @@ type CierreZ = {
   montoInicial: number;
   facturadoTotal: number;
   efectivoNeto: number;
+  egresosTotal?: number;
+  egresosEfectivo?: number;
   totalCaja: number;
   cantidadComprobantes: number;
   detalle?: {
     porFormaPago?: Record<string, number>;
+    egresosPorFormaPago?: Record<string, number>;
     ventas?: Array<{
       id: string;
       fecha: string;
@@ -26,6 +29,14 @@ type CierreZ = {
       formaPago: string;
       signedTotal: number;
       cliente: string;
+    }>;
+    egresos?: Array<{
+      id: string;
+      fecha: string;
+      proveedor: string;
+      concepto: string;
+      formaPago: string;
+      monto: number;
     }>;
   };
   empresa?: {
@@ -103,7 +114,10 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
   const condicionIva = config?.condicionIva || cierre.empresa?.condicionIva || '-';
   const puntoVenta = config?.puntoVenta || 1;
   const ventas = cierre.detalle?.ventas || [];
+  const egresos = cierre.detalle?.egresos || [];
   const porFormaPago = cierre.detalle?.porFormaPago || {};
+  const egresosEfectivo = cierre.egresosEfectivo ?? (cierre.detalle as any)?.egresosEfectivo ?? 0;
+  const egresosTotal = cierre.egresosTotal ?? (cierre.detalle as any)?.egresosTotal ?? 0;
   const tituloCierre = `CIERRE ${cierre.tipo}`;
   const subtituloCierre = cierre.tipo === 'Z' ? 'COMPROBANTE DE CIERRE DIARIO DE CAJA' : 'COMPROBANTE DE CONTROL PARCIAL DE CAJA';
 
@@ -191,6 +205,10 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
             <span>Efectivo neto:</span>
             <strong>{formatMoney(cierre.efectivoNeto)}</strong>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Egresos en efectivo:</span>
+            <strong>-{formatMoney(egresosEfectivo)}</strong>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1rem', borderTop: '1px solid #000', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
             <span>TOTAL FÍSICO ESPERADO EN CAJA:</span>
             <strong>{formatMoney(cierre.totalCaja)}</strong>
@@ -206,6 +224,22 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
             </div>
           ))}
           {Object.keys(porFormaPago).length === 0 && <div>Sin movimientos.</div>}
+        </div>
+
+        <div style={{ fontSize: '0.8rem', borderBottom: '1px dashed #000', paddingBottom: '1rem', marginBottom: '1rem' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>EGRESOS REGISTRADOS</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <span>Total egresos:</span>
+            <strong>{formatMoney(egresosTotal)}</strong>
+          </div>
+          {egresos.map((egreso) => (
+            <div key={egreso.id} style={{ display: 'grid', gridTemplateColumns: '52px 1fr 82px', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <span>{new Date(egreso.fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+              <span>{egreso.proveedor} - {egreso.concepto} - {egreso.formaPago}</span>
+              <strong style={{ textAlign: 'right' }}>-{formatMoney(egreso.monto)}</strong>
+            </div>
+          ))}
+          {egresos.length === 0 && <div>Sin egresos.</div>}
         </div>
 
         <div style={{ fontSize: '0.72rem' }}>

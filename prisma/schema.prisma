@@ -24,6 +24,7 @@ model Empresa {
   movimientos  MovimientoCuentaCorriente[]
   cajasDiarias CajaDiaria[]
   cierresCaja  CierreCaja[]
+  egresosCaja  EgresoCaja[]
 }
 
 model Usuario {
@@ -38,6 +39,7 @@ model Usuario {
   ventas       Venta[]
   cajasDiarias CajaDiaria[]
   cierresCaja  CierreCaja[]
+  egresosCaja  EgresoCaja[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -187,6 +189,25 @@ model CierreCaja {
 
   @@index([empresaId, usuarioId, fecha])
   @@index([empresaId, tipo, emitidoAt])
+}
+
+model EgresoCaja {
+  id          String   @id @default(uuid())
+  empresaId   String
+  empresa     Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarioId   String
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  fecha       DateTime @default(now())
+  proveedor   String
+  categoria   String
+  concepto    String
+  formaPago   String
+  monto       Decimal  @db.Decimal(10, 2)
+  observacion String?
+  createdAt   DateTime @default(now())
+
+  @@index([empresaId, fecha])
+  @@index([empresaId, usuarioId, fecha])
 }
 
 model VentaItem {

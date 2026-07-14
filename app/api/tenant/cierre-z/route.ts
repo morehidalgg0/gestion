@@ -36,23 +36,44 @@ function saleTotal(tipoComprobante: string, total: unknown) {
 }
 
 async function calculateCierre(empresaId: string, usuarioId: string | null, start: Date, end: Date, montoInicial: number) {
-  const ventas = await prisma.venta.findMany({
-    where: {
-      empresaId,
-      ...(usuarioId ? { usuarioId } : {}),
-      fecha: {
-        gte: start,
-        lte: end,
+  const [ventas, egresos] = await Promise.all([
+    prisma.venta.findMany({
+      where: {
+        empresaId,
+        ...(usuarioId ? { usuarioId } : {}),
+        fecha: {
+          gte: start,
+          lte: end,
+        },
+        estado: {
+          in: ['COMPLETADO', 'DEMO'],
+        },
       },
-      estado: {
-        in: ['COMPLETADO', 'DEMO'],
+      include: {
+        cliente: true,
       },
-    },
-    include: {
-      cliente: true,
-    },
-    orderBy: { fecha: 'asc' },
-  });
+      orderBy: { fecha: 'asc' },
+    }),
+    prisma.egresoCaja.findMany({
+      where: {
+        empresaId,
+        ...(usuarioId ? { usuarioId } : {}),
+        fecha: {
+          gte: start,
+          lte: end,
+        },
+      },
+      include: {
+        usuario: {
+          select: {
+            nombre: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { fecha: 'asc' },
+    }),
+  ]);
 
   const porFormaPago = ventas.reduce<Record<string, number>>((acc, venta) => {
     acc[venta.formaPago] = (acc[venta.formaPago] || 0) + signedTotal(venta.tipoComprobante, venta.total);
@@ -61,13 +82,22 @@ async function calculateCierre(empresaId: string, usuarioId: string | null, star
 
   const facturadoTotal = ventas.reduce((acc, venta) => acc + saleTotal(venta.tipoComprobante, venta.total), 0);
   const efectivoNeto = porFormaPago.Efectivo || 0;
+  const egresosPorFormaPago = egresos.reduce<Record<string, number>>((acc, egreso) => {
+    acc[egreso.formaPago] = (acc[egreso.formaPago] || 0) + Number(egreso.monto);
+    return acc;
+  }, {});
+  const egresosTotal = egresos.reduce((acc, egreso) => acc + Number(egreso.monto), 0);
+  const egresosEfectivo = egresosPorFormaPago.Efectivo || 0;
 
   return {
     montoInicial,
     facturadoTotal,
     efectivoNeto,
-    totalCaja: montoInicial + efectivoNeto,
+    egresosTotal,
+    egresosEfectivo,
+    totalCaja: montoInicial + efectivoNeto - egresosEfectivo,
     porFormaPago,
+    egresosPorFormaPago,
     cantidadComprobantes: ventas.length,
     ventas: ventas.map((venta) => ({
       id: venta.id,
@@ -79,6 +109,17 @@ async function calculateCierre(empresaId: string, usuarioId: string | null, star
       total: Number(venta.total),
       signedTotal: signedTotal(venta.tipoComprobante, venta.total),
       cliente: venta.cliente.razonSocial,
+    })),
+    egresos: egresos.map((egreso) => ({
+      id: egreso.id,
+      fecha: egreso.fecha,
+      proveedor: egreso.proveedor,
+      categoria: egreso.categoria,
+      concepto: egreso.concepto,
+      formaPago: egreso.formaPago,
+      monto: Number(egreso.monto),
+      observacion: egreso.observacion,
+      usuario: egreso.usuario.nombre,
     })),
   };
 }
@@ -143,10 +184,14 @@ async function ensureLegacyCierreZ(caja: any) {
     montoInicial: Number(caja.montoInicial),
     facturadoTotal: Number(caja.facturadoTotal || 0),
     efectivoNeto: Number(caja.efectivoNeto || 0),
+    egresosTotal: 0,
+    egresosEfectivo: 0,
     totalCaja: Number(caja.totalCaja || 0),
     porFormaPago: {},
+    egresosPorFormaPago: {},
     cantidadComprobantes: caja.cantidadComprobantes || 0,
     ventas: [],
+    egresos: [],
   };
 
   return prisma.cierreCaja.create({

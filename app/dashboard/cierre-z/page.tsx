@@ -14,6 +14,8 @@ type CierreHistorial = {
   montoInicial: number;
   facturadoTotal: number;
   efectivoNeto: number;
+  egresosTotal: number;
+  egresosEfectivo: number;
   totalCaja: number;
   cantidadComprobantes: number;
 };
@@ -24,11 +26,14 @@ type CierreZData = {
   montoInicial: number;
   facturadoTotal: number;
   efectivoNeto: number;
+  egresosTotal: number;
+  egresosEfectivo: number;
   totalCaja: number;
   cerrado: boolean;
   cerradoAt?: string | null;
   concepto: string;
   porFormaPago: Record<string, number>;
+  egresosPorFormaPago: Record<string, number>;
   cantidadComprobantes: number;
   historial: CierreHistorial[];
   ventas: Array<{
@@ -41,6 +46,16 @@ type CierreZData = {
     total: number;
     signedTotal: number;
     cliente: string;
+  }>;
+  egresos: Array<{
+    id: string;
+    fecha: string;
+    proveedor: string;
+    categoria: string;
+    concepto: string;
+    formaPago: string;
+    monto: number;
+    usuario: string;
   }>;
 };
 
@@ -318,7 +333,16 @@ export default function CierreZPage() {
               <div className="stat-info">
                 <span className="stat-label">Plata total en caja</span>
                 <span className="stat-value">{formatMoney(data.totalCaja)}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fondo fijo + efectivo neto</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fondo fijo + efectivo neto - egresos en efectivo</span>
+              </div>
+            </div>
+
+            <div className="card stat-card">
+              <div className="stat-icon" style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}>$</div>
+              <div className="stat-info">
+                <span className="stat-label">Egresos del día</span>
+                <span className="stat-value">{formatMoney(data.egresosTotal || 0)}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>En efectivo: {formatMoney(data.egresosEfectivo || 0)}</span>
               </div>
             </div>
 
@@ -346,6 +370,10 @@ export default function CierreZPage() {
                   <span>Efectivo cobrado neto</span>
                   <strong>{formatMoney(data.efectivoNeto)}</strong>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Egresos en efectivo</span>
+                  <strong style={{ color: '#b91c1c' }}>-{formatMoney(data.egresosEfectivo || 0)}</strong>
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', fontSize: '1.1rem' }}>
                   <span>Total físico esperado</span>
                   <strong style={{ color: 'var(--primary)' }}>{formatMoney(data.totalCaja)}</strong>
@@ -366,6 +394,41 @@ export default function CierreZPage() {
                   <p style={{ color: 'var(--text-muted)' }}>Todavía no hay comprobantes emitidos en este día.</p>
                 )}
               </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1rem' }}>Egresos registrados</h3>
+            <div className="table-container" style={{ marginBottom: 0 }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Proveedor</th>
+                    <th>Concepto</th>
+                    <th>Pago</th>
+                    <th style={{ textAlign: 'right' }}>Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.egresos || []).map((egreso) => (
+                    <tr key={egreso.id}>
+                      <td>{new Date(egreso.fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td>{egreso.proveedor}</td>
+                      <td>{egreso.concepto}</td>
+                      <td>{egreso.formaPago}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: '#b91c1c' }}>-{formatMoney(egreso.monto)}</td>
+                    </tr>
+                  ))}
+                  {(!data.egresos || data.egresos.length === 0) && (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                        No hay egresos registrados para este día.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
