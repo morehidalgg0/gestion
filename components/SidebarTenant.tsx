@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingCart, Package, Users, DollarSign, Settings, BarChart2, LogOut, ShieldAlert, ReceiptText } from 'lucide-react';
+import { ShoppingCart, Package, Users, DollarSign, Settings, BarChart2, LogOut, ShieldAlert, ReceiptText, ClipboardCheck } from 'lucide-react';
 
 export default function SidebarTenant() {
   const pathname = usePathname();
@@ -33,6 +33,7 @@ export default function SidebarTenant() {
   const navItems = [
     { name: 'Punto de Venta (POS)', href: '/dashboard/ventas', icon: ShoppingCart },
     { name: 'Comprobantes', href: '/dashboard/comprobantes', icon: ReceiptText },
+    { name: 'Cierre Z', href: '/dashboard/cierre-z', icon: ClipboardCheck },
     { name: 'Productos / Stock', href: '/dashboard/productos', icon: Package, ownerOnly: true },
     { name: 'Clientes', href: '/dashboard/clientes', icon: Users, ownerOnly: true },
     { name: 'Cuentas Corrientes', href: '/dashboard/cuentas-corrientes', icon: DollarSign, ownerOnly: true },

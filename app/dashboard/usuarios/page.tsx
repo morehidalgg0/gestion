@@ -132,7 +132,7 @@ export default function StaffPage() {
               </div>
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
                 <strong style={{ color: 'var(--text-main)' }}>Cajero (Employee):</strong>
-                <p>Orientado a la atención rápida al cliente. Solo puede entrar a la sección Punto de Venta (POS) y cobrar a clientes.</p>
+                <p>Orientado a la atención rápida al cliente. Puede vender, ver comprobantes emitidos y consultar su cierre Z diario, sin acceso a reportes ni configuración administrativa.</p>
               </div>
             </div>
           </div>

@@ -10,6 +10,10 @@ function getTenantId(req: NextRequest): string {
   return empresaId;
 }
 
+function getUserId(req: NextRequest): string | null {
+  return req.headers.get('x-user-id');
+}
+
 function getCreditNoteType(tipoComprobante: string) {
   switch (tipoComprobante) {
     case 'Factura A':
@@ -32,6 +36,7 @@ export async function POST(
   try {
     const { id } = await params;
     const empresaId = getTenantId(req);
+    const usuarioId = getUserId(req);
 
     const empresa = await prisma.empresa.findUnique({
       where: { id: empresaId },
@@ -148,6 +153,7 @@ export async function POST(
       const creditNote = await tx.venta.create({
         data: {
           empresaId,
+          usuarioId,
           clienteId: original.clienteId,
           tipoComprobante: tipoNotaCredito,
           puntoVenta: configAfip.puntoVenta,

@@ -10,6 +10,10 @@ function getTenantId(req: NextRequest): string {
   return empresaId;
 }
 
+function getUserId(req: NextRequest): string | null {
+  return req.headers.get('x-user-id');
+}
+
 export async function GET(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
@@ -30,6 +34,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
+    const usuarioId = getUserId(req);
 
     // 1. Load company and subscription details to verify limits
     const empresa = await prisma.empresa.findUnique({
@@ -217,6 +222,7 @@ export async function POST(req: NextRequest) {
       await prisma.venta.create({
         data: {
           empresaId,
+          usuarioId,
           clienteId,
           tipoComprobante,
           puntoVenta: configAfip.puntoVenta,
@@ -287,6 +293,7 @@ export async function POST(req: NextRequest) {
       const sale = await tx.venta.create({
         data: {
           empresaId,
+          usuarioId,
           clienteId,
           tipoComprobante,
           puntoVenta: configAfip.puntoVenta,
