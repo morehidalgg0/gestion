@@ -57,7 +57,7 @@ export async function middleware(req: NextRequest) {
       const canAccessEmployeeApi =
         (pathname === '/api/tenant/ventas' && (req.method === 'GET' || req.method === 'POST')) ||
         (pathname.startsWith('/api/tenant/ventas/') && req.method === 'GET') ||
-        (pathname === '/api/tenant/cierre-z' && (req.method === 'GET' || req.method === 'PUT')) ||
+        (pathname === '/api/tenant/cierre-z' && (req.method === 'GET' || req.method === 'PUT' || req.method === 'POST')) ||
         (pathname === '/api/tenant/productos' && req.method === 'GET') ||
         (pathname === '/api/tenant/clientes' && req.method === 'GET');
 

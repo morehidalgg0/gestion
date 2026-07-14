@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Banknote, CalendarDays, ClipboardCheck, Printer, Save } from 'lucide-react';
+import { Banknote, CalendarDays, CheckCircle2, ClipboardCheck, Printer, Save } from 'lucide-react';
 
 type CierreZData = {
   fecha: string;
@@ -10,6 +10,9 @@ type CierreZData = {
   facturadoTotal: number;
   efectivoNeto: number;
   totalCaja: number;
+  cerrado: boolean;
+  cerradoAt?: string | null;
+  concepto: string;
   porFormaPago: Record<string, number>;
   cantidadComprobantes: number;
   ventas: Array<{
@@ -47,6 +50,7 @@ export default function CierreZPage() {
   const [montoInicial, setMontoInicial] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [error, setError] = useState('');
 
   const loadCierre = async () => {
@@ -96,6 +100,32 @@ export default function CierreZPage() {
     }
   };
 
+  const handleEmitirCierre = async () => {
+    const confirmed = window.confirm('Vas a emitir el Cierre Z manual del día. Una vez emitido, quedará guardado y no se podrá modificar el fondo inicial. ¿Continuar?');
+    if (!confirmed) return;
+
+    setClosing(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/tenant/cierre-z', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'No se pudo emitir el cierre Z.');
+      }
+      setData(result);
+      setMontoInicial(String(result.montoInicial));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setClosing(false);
+    }
+  };
+
   return (
     <div>
       <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', marginBottom: '2rem' }}>
@@ -105,7 +135,7 @@ export default function CierreZPage() {
             <span>Cierre Z Diario</span>
           </h2>
           <p style={{ color: 'var(--text-muted)' }}>
-            Controlá lo facturado en el día y la plata total que debe quedar en caja.
+            El Cierre Z se emite manualmente y representa todo lo vendido en el día por este usuario.
           </p>
         </div>
 
@@ -147,12 +177,16 @@ export default function CierreZPage() {
               step="0.01"
               value={montoInicial}
               onChange={(e) => setMontoInicial(e.target.value)}
-              disabled={loading || saving}
+              disabled={loading || saving || !!data?.cerrado}
             />
           </div>
-          <button onClick={handleSaveMontoInicial} className="btn btn-primary" disabled={loading || saving}>
+          <button onClick={handleSaveMontoInicial} className="btn btn-secondary" disabled={loading || saving || !!data?.cerrado}>
             <Save size={16} />
             <span>{saving ? 'Guardando...' : 'Guardar fondo'}</span>
+          </button>
+          <button onClick={handleEmitirCierre} className="btn btn-primary" disabled={loading || closing || !!data?.cerrado}>
+            <CheckCircle2 size={16} />
+            <span>{closing ? 'Emitiendo...' : 'Emitir Cierre Z'}</span>
           </button>
         </div>
       </div>
@@ -162,8 +196,18 @@ export default function CierreZPage() {
       ) : (
         <div className="print-ticket">
           <div style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.35rem', marginBottom: '0.25rem' }}>Cierre Z - {new Date(`${data.fecha}T00:00:00-03:00`).toLocaleDateString('es-AR')}</h3>
-            <p style={{ color: 'var(--text-muted)' }}>Incluye comprobantes completados y demo del usuario logueado.</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+              <h3 style={{ fontSize: '1.35rem' }}>Cierre Z - {new Date(`${data.fecha}T00:00:00-03:00`).toLocaleDateString('es-AR')}</h3>
+              <span className={`badge ${data.cerrado ? 'badge-success' : 'badge-warning'}`}>
+                {data.cerrado ? 'Cierre emitido' : 'Vista previa sin emitir'}
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-muted)' }}>{data.concepto}</p>
+            {data.cerradoAt && (
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.35rem' }}>
+                Emitido manualmente el {new Date(data.cerradoAt).toLocaleString('es-AR')}.
+              </p>
+            )}
           </div>
 
           <div className="grid-stats">
@@ -172,7 +216,7 @@ export default function CierreZPage() {
               <div className="stat-info">
                 <span className="stat-label">Facturado del día</span>
                 <span className="stat-value">{formatMoney(data.facturadoTotal)}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Neto de notas de crédito</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Todo lo vendido en el día, neto de notas de crédito</span>
               </div>
             </div>
 

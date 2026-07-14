@@ -150,6 +150,13 @@ model CajaDiaria {
   usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   fecha        DateTime
   montoInicial Decimal  @default(10000.00) @db.Decimal(10, 2)
+  cerradoAt    DateTime?
+  concepto     String   @default("Cierre Z diario: total de comprobantes emitidos en el dia")
+  facturadoTotal Decimal? @db.Decimal(10, 2)
+  efectivoNeto Decimal? @db.Decimal(10, 2)
+  totalCaja    Decimal? @db.Decimal(10, 2)
+  cantidadComprobantes Int?
+  detalle      Json?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
