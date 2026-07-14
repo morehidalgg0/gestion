@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Package, Plus, Pencil, ArrowUpDown, AlertCircle } from 'lucide-react';
+import { Plus, ArrowUpDown, AlertCircle, Trash2 } from 'lucide-react';
 
 export default function ProductosPage() {
   const [productos, setProductos] = useState<any[]>([]);
@@ -134,6 +134,26 @@ export default function ProductosPage() {
     }
   };
 
+  const handleDeleteProduct = async (product: any) => {
+    const confirmed = window.confirm(`Vas a eliminar "${product.nombre}" del catálogo. No se verá más en productos ni en el POS. ¿Continuar?`);
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/tenant/productos?id=${product.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo eliminar el producto.');
+      }
+
+      loadProducts();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   const openAdjustModal = (product: any) => {
     setSelectedProduct(product);
     setNuevoPrecioVenta(product.precioVenta.toString());
@@ -223,10 +243,16 @@ export default function ProductosPage() {
                       )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <button onClick={() => openAdjustModal(prod)} className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.65rem' }}>
-                        <ArrowUpDown size={14} />
-                        <span>Ajustar Stock / Precios</span>
-                      </button>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button onClick={() => openAdjustModal(prod)} className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.65rem' }}>
+                          <ArrowUpDown size={14} />
+                          <span>Ajustar Stock / Precios</span>
+                        </button>
+                        <button onClick={() => handleDeleteProduct(prod)} className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.65rem', color: '#b91c1c' }}>
+                          <Trash2 size={14} />
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

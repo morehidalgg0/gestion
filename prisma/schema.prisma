@@ -90,6 +90,7 @@ model Producto {
   ivaPorcentaje Decimal     @db.Decimal(5, 2)
   stockActual   Decimal     @db.Decimal(10, 3) // Decimal para gramos
   stockMinimo   Decimal     @db.Decimal(10, 3)
+  activo        Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   ventaItems    VentaItem[]
