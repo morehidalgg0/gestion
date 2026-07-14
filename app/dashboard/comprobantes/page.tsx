@@ -86,24 +86,51 @@ export default function ComprobantesPage() {
     loadData();
   }, []);
 
-  const hasCreditNote = (venta: Venta) => {
-    return ventas.some((item) =>
+  const creditNotesFor = (venta: Venta) => {
+    return ventas.filter((item) =>
       item.tipoComprobante.startsWith('Nota de Crédito') &&
       item.mensajeAfip?.includes(`Comprobante original ID: ${venta.id}`)
     );
   };
 
+  const creditedAmount = (venta: Venta) => {
+    return creditNotesFor(venta).reduce((acc, item) => acc + Number(item.total), 0);
+  };
+
+  const remainingCreditAmount = (venta: Venta) => {
+    return Math.max(0, Number(venta.total) - creditedAmount(venta));
+  };
+
+  const hasCreditNote = (venta: Venta) => creditNotesFor(venta).length > 0;
+
   const canIssueCreditNote = (venta: Venta) => {
     return (session?.rol === 'OWNER' || session?.rol === 'EMPLOYEE') &&
       venta.estado !== 'RECHAZADO_AFIP' &&
       venta.tipoComprobante.startsWith('Factura') &&
-      !hasCreditNote(venta);
+      remainingCreditAmount(venta) > 0.009;
   };
 
   const handleEmitCreditNote = async (venta: Venta) => {
-    const confirmed = window.confirm(
-      `Vas a emitir una nota de crédito total para ${venta.tipoComprobante} ${formatVoucherNumber(venta)}. ¿Continuar?`
+    const remaining = remainingCreditAmount(venta);
+    const input = window.prompt(
+      `Monto de la nota de crédito para ${venta.tipoComprobante} ${formatVoucherNumber(venta)}. Máximo disponible: ${formatMoney(String(remaining))}`,
+      remaining.toFixed(2)
     );
+
+    if (input === null) return;
+
+    const monto = Number(input.replace(',', '.'));
+    if (!Number.isFinite(monto) || monto <= 0) {
+      setError('El monto de la nota de crédito debe ser mayor a cero.');
+      return;
+    }
+
+    if (monto - remaining > 0.009) {
+      setError(`El monto supera el saldo disponible para acreditar (${formatMoney(String(remaining))}).`);
+      return;
+    }
+
+    const confirmed = window.confirm(`Vas a emitir una nota de crédito por ${formatMoney(String(monto))}. ¿Continuar?`);
     if (!confirmed) return;
 
     setIssuingCreditNoteId(venta.id);
@@ -112,6 +139,8 @@ export default function ComprobantesPage() {
     try {
       const response = await fetch(`/api/tenant/ventas/${venta.id}/nota-credito`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monto }),
       });
 
       const data = await response.json();
@@ -299,7 +328,11 @@ export default function ComprobantesPage() {
                     </button>
                   )}
                   {venta.tipoComprobante.startsWith('Factura') && hasCreditNote(venta) && (
-                    <span className="badge badge-info">Nota emitida</span>
+                    <span className="badge badge-info">
+                      {remainingCreditAmount(venta) > 0.009
+                        ? `Acreditado ${formatMoney(String(creditedAmount(venta)))}`
+                        : 'Acreditada total'}
+                    </span>
                   )}
                   </div>
                 </td>

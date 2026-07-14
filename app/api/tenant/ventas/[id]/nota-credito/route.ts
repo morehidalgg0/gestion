@@ -37,6 +37,8 @@ export async function POST(
     const { id } = await params;
     const empresaId = getTenantId(req);
     const usuarioId = getUserId(req);
+    const body = await req.json().catch(() => ({}));
+    const requestedAmount = body?.monto !== undefined ? Number(body.monto) : null;
 
     const empresa = await prisma.empresa.findUnique({
       where: { id: empresaId },
@@ -72,7 +74,7 @@ export async function POST(
       return NextResponse.json({ error: 'No se puede emitir nota de crédito sobre un comprobante rechazado.' }, { status: 400 });
     }
 
-    const existingCreditNote = await prisma.venta.findFirst({
+    const existingCreditNotes = await prisma.venta.findMany({
       where: {
         empresaId,
         tipoComprobante: tipoNotaCredito,
@@ -80,18 +82,41 @@ export async function POST(
       },
     });
 
-    if (existingCreditNote) {
-      return NextResponse.json({ error: 'Este comprobante ya tiene una nota de crédito emitida.' }, { status: 400 });
+    const originalTotal = original.total.toNumber();
+    if (originalTotal <= 0) {
+      return NextResponse.json({ error: 'El comprobante original no tiene un total válido para acreditar.' }, { status: 400 });
+    }
+
+    const creditedTotal = existingCreditNotes.reduce((acc, note) => acc + note.total.toNumber(), 0);
+    const remainingTotal = Math.max(0, originalTotal - creditedTotal);
+    const creditAmount = requestedAmount === null ? remainingTotal : requestedAmount;
+
+    if (remainingTotal <= 0.009) {
+      return NextResponse.json({ error: 'Este comprobante ya fue acreditado por completo.' }, { status: 400 });
+    }
+
+    if (!Number.isFinite(creditAmount) || creditAmount <= 0) {
+      return NextResponse.json({ error: 'El monto de la nota de crédito debe ser mayor a cero.' }, { status: 400 });
+    }
+
+    if (creditAmount - remainingTotal > 0.009) {
+      return NextResponse.json(
+        { error: `El monto supera el saldo disponible para acreditar ($${remainingTotal.toFixed(2)}).` },
+        { status: 400 }
+      );
     }
 
     const configAfip = empresa.configAfip;
+    const ratio = creditAmount / originalTotal;
     const invoiceItems = original.items.map((item) => ({
       productoId: item.productoId,
       nombre: item.productoName,
-      cantidad: item.cantidad.toNumber(),
+      cantidad: item.cantidad.toNumber() * ratio,
       precioUnitario: item.precioUnitario.toNumber(),
       ivaPorcentaje: item.producto.ivaPorcentaje.toNumber(),
     }));
+    const subtotalCredito = original.subtotal.toNumber() * ratio;
+    const ivaCredito = original.iva.toNumber() * ratio;
 
     const afipResult = await emitirFactura({
       cuitEmisor: configAfip.cuit,
@@ -158,14 +183,14 @@ export async function POST(
           tipoComprobante: tipoNotaCredito,
           puntoVenta: configAfip.puntoVenta,
           numeroComprobante: finalVoucherNumber,
-          subtotal: original.subtotal,
-          iva: original.iva,
-          total: original.total,
+          subtotal: subtotalCredito,
+          iva: ivaCredito,
+          total: creditAmount,
           formaPago: original.formaPago,
           estado: afipResult.estado,
           cae: afipResult.cae,
           caeVencimiento: afipResult.caeVencimiento,
-          mensajeAfip: `${afipResult.mensajeAfip || 'Nota de crédito emitida'}. Comprobante original ID: ${original.id}`,
+          mensajeAfip: `${afipResult.mensajeAfip || 'Nota de crédito emitida'}. Nota parcial por $${creditAmount.toFixed(2)}. Comprobante original ID: ${original.id}`,
           items: {
             create: invoiceItems.map((item) => ({
               productoId: item.productoId,
@@ -186,7 +211,7 @@ export async function POST(
         const clientAfterUpdate = await tx.cliente.update({
           where: { id: original.clienteId },
           data: {
-            saldoCuentaCorriente: { decrement: original.total },
+            saldoCuentaCorriente: { decrement: creditAmount },
           },
         });
 
@@ -198,7 +223,7 @@ export async function POST(
             concepto: `${tipoNotaCredito} Nº ${configAfip.puntoVenta.toString().padStart(4, '0')}-${finalVoucherNumber
               .toString()
               .padStart(8, '0')}`,
-            importe: original.total,
+            importe: creditAmount,
             ventaId: creditNote.id,
             saldoResultante: clientAfterUpdate.saldoCuentaCorriente,
           },
