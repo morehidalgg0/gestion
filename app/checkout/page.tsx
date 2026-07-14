@@ -33,9 +33,9 @@ export default function CheckoutPage() {
         }
 
         // Load Plans
-        const plansRes = await fetch('/api/superadmin/planes');
+        const plansRes = await fetch('/api/planes');
         const plansData = await plansRes.json();
-        setPlans(plansData);
+        setPlans(Array.isArray(plansData) ? plansData : []);
       } catch (err: any) {
         setError('Error al cargar planes. Intentá recargar la página.');
       } finally {
