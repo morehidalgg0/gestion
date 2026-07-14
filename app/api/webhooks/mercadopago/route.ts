@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getPreapprovalDetails } from '@/lib/mercadopago';
+import { getPreapprovalDetails, isDemoMode } from '@/lib/mercadopago';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     console.log('Received Mercado Pago Webhook:', JSON.stringify(body));
 
     // 1. DEMO MODE WEBHOOK SIMULATOR TRIGGER
-    if (process.env.DEMO_MODE === 'true' && body.isDemoTrigger) {
+    if (isDemoMode() && body.isDemoTrigger) {
       const { empresaId, planId, status, preapprovalId } = body;
       
       const empresa = await prisma.empresa.findUnique({

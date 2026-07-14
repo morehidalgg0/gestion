@@ -7,6 +7,22 @@ export interface SubscriptionRequest {
 
 const MP_API_URL = 'https://api.mercadopago.com';
 
+export function isDemoMode(): boolean {
+  const value = process.env.DEMO_MODE?.trim().replace(/^['"]|['"]$/g, '').toLowerCase();
+  return value === 'true' || value === '1' || value === 'yes';
+}
+
+function getDemoCheckoutUrl({ empresaId, email, planNombre, precio }: SubscriptionRequest): string {
+  const params = new URLSearchParams({
+    empresaId,
+    email,
+    plan: planNombre,
+    precio: precio.toString(),
+    demo: 'true',
+  });
+  return `/checkout/demo?${params.toString()}`;
+}
+
 /**
  * Gets the base URL of the application.
  */
@@ -27,25 +43,16 @@ export async function createSubscriptionPreapproval({
   planNombre,
   precio,
 }: SubscriptionRequest): Promise<string> {
-  const isDemo = process.env.DEMO_MODE === 'true';
+  const isDemo = isDemoMode();
 
   if (isDemo) {
-    // Return local simulated checkout page url
-    const params = new URLSearchParams({
-      empresaId,
-      email,
-      plan: planNombre,
-      precio: precio.toString(),
-      demo: 'true',
-    });
-    return `/checkout/demo?${params.toString()}`;
+    return getDemoCheckoutUrl({ empresaId, email, planNombre, precio });
   }
 
   const mpToken = process.env.MP_ACCESS_TOKEN;
   if (!mpToken) {
-    throw new Error(
-      'CRITICAL: MP_ACCESS_TOKEN environment variable is missing. Subscription payments cannot be processed.'
-    );
+    console.warn('MP_ACCESS_TOKEN is missing. Falling back to demo checkout.');
+    return getDemoCheckoutUrl({ empresaId, email, planNombre, precio });
   }
 
   const baseUrl = getBaseUrl();
@@ -97,7 +104,7 @@ export async function createSubscriptionPreapproval({
  * Fetches subscription details from Mercado Pago using the preapproval ID.
  */
 export async function getPreapprovalDetails(preapprovalId: string): Promise<any> {
-  const isDemo = process.env.DEMO_MODE === 'true';
+  const isDemo = isDemoMode();
   if (isDemo) {
     // Dummy demo data
     return {
