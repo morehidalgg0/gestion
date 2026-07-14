@@ -45,17 +45,27 @@ export async function POST(req: NextRequest) {
 
     if (usuarioId) {
       const { start } = getBusinessDay();
-      const cajaCerrada = await prisma.cajaDiaria.findUnique({
-        where: {
-          empresaId_usuarioId_fecha: {
+      const [cajaCerrada, cierreZEmitido] = await Promise.all([
+        prisma.cajaDiaria.findUnique({
+          where: {
+            empresaId_usuarioId_fecha: {
+              empresaId,
+              usuarioId,
+              fecha: start,
+            },
+          },
+        }),
+        prisma.cierreCaja.findFirst({
+          where: {
             empresaId,
             usuarioId,
             fecha: start,
+            tipo: 'Z',
           },
-        },
-      });
+        }),
+      ]);
 
-      if (cajaCerrada?.cerradoAt) {
+      if (cajaCerrada?.cerradoAt || cierreZEmitido) {
         return NextResponse.json(
           { error: 'La caja de hoy ya tiene Cierre Z emitido. No se pueden registrar más ventas en esta jornada.' },
           { status: 403 }

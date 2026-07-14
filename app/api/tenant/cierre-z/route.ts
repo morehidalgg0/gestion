@@ -131,6 +131,47 @@ function toCierreResponse(cierre: any) {
   };
 }
 
+async function ensureLegacyCierreZ(caja: any) {
+  if (!caja.cerradoAt) return null;
+
+  const existing = await prisma.cierreCaja.findFirst({
+    where: {
+      cajaDiariaId: caja.id,
+      tipo: 'Z',
+    },
+  });
+
+  if (existing) return existing;
+
+  const detalle = (caja.detalle as any) || {
+    montoInicial: Number(caja.montoInicial),
+    facturadoTotal: Number(caja.facturadoTotal || 0),
+    efectivoNeto: Number(caja.efectivoNeto || 0),
+    totalCaja: Number(caja.totalCaja || 0),
+    porFormaPago: {},
+    cantidadComprobantes: caja.cantidadComprobantes || 0,
+    ventas: [],
+  };
+
+  return prisma.cierreCaja.create({
+    data: {
+      empresaId: caja.empresaId,
+      usuarioId: caja.usuarioId,
+      cajaDiariaId: caja.id,
+      tipo: 'Z',
+      fecha: caja.fecha,
+      emitidoAt: caja.cerradoAt,
+      concepto: caja.concepto || cierreConcepto('Z'),
+      montoInicial: caja.montoInicial,
+      facturadoTotal: caja.facturadoTotal || 0,
+      efectivoNeto: caja.efectivoNeto || 0,
+      totalCaja: caja.totalCaja || 0,
+      cantidadComprobantes: caja.cantidadComprobantes || 0,
+      detalle,
+    },
+  });
+}
+
 export async function GET(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
@@ -141,6 +182,7 @@ export async function GET(req: NextRequest) {
     const cierreUsuarioId = userRole === 'OWNER' ? null : usuarioId;
 
     const caja = await getOrCreateCaja(empresaId, usuarioId, start);
+    await ensureLegacyCierreZ(caja);
     const montoInicial = Number(caja.montoInicial);
     const calculated = await calculateCierre(empresaId, cierreUsuarioId, start, end, montoInicial);
     const cierres = await prisma.cierreCaja.findMany({

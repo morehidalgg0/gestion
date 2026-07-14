@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { ShoppingCart, Search, Trash2, CheckCircle2, AlertOctagon, HelpCircle } from 'lucide-react';
 
+function todayArgentina() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+}
+
 export default function PosPage() {
   const [productos, setProductos] = useState<any[]>([]);
   const [clientes, setClientes] = useState<any[]>([]);
@@ -20,18 +24,27 @@ export default function PosPage() {
   // Dialog / Result states
   const [successResult, setSuccessResult] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [cajaCerrada, setCajaCerrada] = useState<{ cerrado: boolean; cerradoAt?: string | null }>({ cerrado: false });
 
   const loadData = async () => {
     try {
-      const [prodRes, cliRes] = await Promise.all([
+      const [prodRes, cliRes, cierreRes] = await Promise.all([
         fetch('/api/tenant/productos'),
         fetch('/api/tenant/clientes'),
+        fetch(`/api/tenant/cierre-z?fecha=${todayArgentina()}`),
       ]);
       
       const prodData = await prodRes.json();
       const cliData = await cliRes.json();
+      const cierreData = await cierreRes.json().catch(() => null);
 
       setProductos(Array.isArray(prodData) ? prodData : []);
+      if (cierreRes.ok && cierreData) {
+        setCajaCerrada({ cerrado: !!cierreData.cerrado, cerradoAt: cierreData.cerradoAt });
+        if (cierreData.cerrado) {
+          setCart([]);
+        }
+      }
       
       const clientsList = Array.isArray(cliData) ? cliData : [];
       setClientes(clientsList);
@@ -69,6 +82,11 @@ export default function PosPage() {
   }, []);
 
   const addToCart = (product: any) => {
+    if (cajaCerrada.cerrado) {
+      alert('La caja de hoy ya tiene Cierre Z emitido. No se pueden registrar más ventas en esta jornada.');
+      return;
+    }
+
     const existing = cart.find((item) => item.productoId === product.id);
     const availableStock = product.stockActual;
 
@@ -177,6 +195,11 @@ export default function PosPage() {
   const totals = calculateCartTotals();
 
   const handleCheckout = async () => {
+    if (cajaCerrada.cerrado) {
+      setErrorMessage('La caja de hoy ya tiene Cierre Z emitido. No se pueden registrar más ventas en esta jornada.');
+      return;
+    }
+
     if (cart.length === 0) {
       alert('El carrito de compras está vacío.');
       return;
@@ -235,6 +258,12 @@ export default function PosPage() {
         <p style={{ color: 'var(--text-muted)' }}>Carga el carrito de compras del cliente y emite comprobantes oficiales.</p>
       </div>
 
+      {cajaCerrada.cerrado && (
+        <div style={{ padding: '1rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem' }}>
+          La caja de hoy ya tiene Cierre Z emitido{cajaCerrada.cerradoAt ? ` el ${new Date(cajaCerrada.cerradoAt).toLocaleString('es-AR')}` : ''}. No se pueden registrar más ventas en esta jornada.
+        </div>
+      )}
+
       {loading ? (
         <p style={{ color: 'var(--text-muted)' }}>Cargando caja registradora...</p>
       ) : (
@@ -259,6 +288,7 @@ export default function PosPage() {
                   key={p.id}
                   onClick={() => addToCart(p)}
                   className="card pos-product-card"
+                  style={{ opacity: cajaCerrada.cerrado ? 0.55 : 1, cursor: cajaCerrada.cerrado ? 'not-allowed' : 'pointer' }}
                 >
                   <div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
@@ -298,9 +328,10 @@ export default function PosPage() {
               <label className="form-label">Cliente Receptor</label>
               <select
                 className="form-select"
-                value={selectedClienteId}
-                onChange={(e) => setSelectedClienteId(e.target.value)}
-              >
+                  value={selectedClienteId}
+                  onChange={(e) => setSelectedClienteId(e.target.value)}
+                  disabled={cajaCerrada.cerrado}
+                >
                 {clientes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.razonSocial} ({c.tipoDoc}: {c.nroDoc})
@@ -336,6 +367,7 @@ export default function PosPage() {
                         style={{ width: '90px', padding: '0.35rem 0.5rem', textAlign: 'center' }}
                         value={item.cantidad}
                         onChange={(e) => updateCartQty(item.productoId, e.target.value)}
+                        disabled={cajaCerrada.cerrado}
                       />
                       <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.unidad}</span>
                     </div>
@@ -343,6 +375,7 @@ export default function PosPage() {
                       onClick={() => removeFromCart(item.productoId)}
                       className="btn btn-secondary btn-sm"
                       style={{ padding: '0.4rem', border: 'none', color: '#ef4444' }}
+                      disabled={cajaCerrada.cerrado}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -367,6 +400,7 @@ export default function PosPage() {
                   style={{ padding: '0.5rem 0.75rem', fontSize: '0.9rem' }}
                   value={formaPago}
                   onChange={(e) => setFormaPago(e.target.value)}
+                  disabled={cajaCerrada.cerrado}
                 >
                   <option value="Efectivo">💵 Efectivo</option>
                   <option value="Tarjeta">💳 Tarjeta (Crédito/Débito)</option>
@@ -383,6 +417,7 @@ export default function PosPage() {
                   style={{ padding: '0.5rem 0.75rem', fontSize: '0.9rem' }}
                   value={tipoComprobanteSeleccionado}
                   onChange={(e) => setTipoComprobanteSeleccionado(e.target.value)}
+                  disabled={cajaCerrada.cerrado}
                 >
                   <option value="auto">📄 AFIP Fiscal (Automático A/B/C)</option>
                   <option value="Factura X">❌ Ticket X (No Fiscal / Factura X)</option>
@@ -413,9 +448,9 @@ export default function PosPage() {
                 onClick={handleCheckout}
                 className="btn btn-primary btn-lg pos-checkout-button"
                 style={{ width: '100%', padding: '0.85rem' }}
-                disabled={submitting || cart.length === 0}
+                disabled={submitting || cart.length === 0 || cajaCerrada.cerrado}
               >
-                {submitting ? 'Emitiendo CAE AFIP...' : 'Emitir Factura y Cobrar'}
+                {cajaCerrada.cerrado ? 'Caja cerrada por Cierre Z' : submitting ? 'Emitiendo CAE AFIP...' : 'Emitir Factura y Cobrar'}
               </button>
             </div>
           </div>
