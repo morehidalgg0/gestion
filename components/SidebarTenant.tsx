@@ -32,13 +32,13 @@ export default function SidebarTenant() {
 
   const navItems = [
     { name: 'Punto de Venta (POS)', href: '/dashboard/ventas', icon: ShoppingCart },
-    { name: 'Comprobantes', href: '/dashboard/comprobantes', icon: ReceiptText, ownerOnly: true },
-    { name: 'Productos / Stock', href: '/dashboard/productos', icon: Package },
-    { name: 'Clientes', href: '/dashboard/clientes', icon: Users },
-    { name: 'Cuentas Corrientes', href: '/dashboard/cuentas-corrientes', icon: DollarSign },
-    { name: 'Configuración AFIP', href: '/dashboard/config-afip', icon: Settings },
-    { name: 'Reportes', href: '/dashboard/reportes', icon: BarChart2 },
-    { name: 'Personal / Caja', href: '/dashboard/usuarios', icon: ShieldAlert },
+    { name: 'Comprobantes', href: '/dashboard/comprobantes', icon: ReceiptText },
+    { name: 'Productos / Stock', href: '/dashboard/productos', icon: Package, ownerOnly: true },
+    { name: 'Clientes', href: '/dashboard/clientes', icon: Users, ownerOnly: true },
+    { name: 'Cuentas Corrientes', href: '/dashboard/cuentas-corrientes', icon: DollarSign, ownerOnly: true },
+    { name: 'Configuración AFIP', href: '/dashboard/config-afip', icon: Settings, ownerOnly: true },
+    { name: 'Reportes', href: '/dashboard/reportes', icon: BarChart2, ownerOnly: true },
+    { name: 'Personal / Caja', href: '/dashboard/usuarios', icon: ShieldAlert, ownerOnly: true },
   ];
 
   return (

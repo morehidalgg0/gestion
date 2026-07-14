@@ -46,7 +46,28 @@ export async function middleware(req: NextRequest) {
       }
       return NextResponse.redirect(new URL('/login', req.url));
     }
-    
+
+    if (session.rol === 'EMPLOYEE') {
+      const canAccessEmployeeDashboard =
+        pathname === '/dashboard' ||
+        pathname.startsWith('/dashboard/ventas') ||
+        pathname.startsWith('/dashboard/comprobantes');
+
+      const canAccessEmployeeApi =
+        (pathname === '/api/tenant/ventas' && (req.method === 'GET' || req.method === 'POST')) ||
+        (pathname.startsWith('/api/tenant/ventas/') && req.method === 'GET') ||
+        (pathname === '/api/tenant/productos' && req.method === 'GET') ||
+        (pathname === '/api/tenant/clientes' && req.method === 'GET');
+
+      if (pathname.startsWith('/dashboard') && !canAccessEmployeeDashboard) {
+        return NextResponse.redirect(new URL('/dashboard/ventas', req.url));
+      }
+
+      if (pathname.startsWith('/api/tenant') && !canAccessEmployeeApi) {
+        return NextResponse.json({ error: 'Acceso denegado. Se requiere rol administrador del comercio.' }, { status: 403 });
+      }
+    }
+
     // We can inject session headers for downstream routes/APIs to avoid re-decoding JWT
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-user-id', session.userId);

@@ -43,7 +43,6 @@ function getEstadoBadge(estado: string) {
 }
 
 export default function ComprobantesPage() {
-  const [session, setSession] = useState<any>(null);
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -60,13 +59,6 @@ export default function ComprobantesPage() {
         const sessionData = await sessionRes.json();
         if (!sessionData.authenticated) {
           throw new Error('No se pudo validar la sesión.');
-        }
-
-        setSession(sessionData.user);
-
-        if (sessionData.user?.rol !== 'OWNER') {
-          setVentas([]);
-          return;
         }
 
         const ventasRes = await fetch('/api/tenant/ventas');
@@ -121,17 +113,6 @@ export default function ComprobantesPage() {
 
   if (loading) {
     return <p style={{ color: 'var(--text-muted)' }}>Cargando historial de comprobantes...</p>;
-  }
-
-  if (session?.rol !== 'OWNER') {
-    return (
-      <div className="card" style={{ maxWidth: '720px' }}>
-        <h2 style={{ marginBottom: '0.5rem' }}>Acceso restringido</h2>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Solo el administrador del comercio puede ver el historial completo de comprobantes emitidos.
-        </p>
-      </div>
-    );
   }
 
   return (
