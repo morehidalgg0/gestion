@@ -161,7 +161,7 @@ export default function DashboardHome() {
             <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
               ¿Necesitás ayuda para delegar tu CUIT en AFIP o configurar tu facturación real?
             </p>
-            <a href="mailto:soporte@dieteticasaas.com" className="btn btn-primary btn-sm" style={{ marginTop: '1rem', width: '100%' }}>
+            <a href="mailto:soporte@comerciopro.com" className="btn btn-primary btn-sm" style={{ marginTop: '1rem', width: '100%' }}>
               📧 Contactar Soporte
             </a>
           </div>

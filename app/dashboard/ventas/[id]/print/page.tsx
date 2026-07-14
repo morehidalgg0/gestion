@@ -151,7 +151,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             {/* Left Col: Emisor Info */}
             <div style={{ fontSize: '0.75rem' }}>
               <div style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
-                {config?.razonSocial || empresa?.nombre || 'Dietética Natural'}
+                {config?.razonSocial || empresa?.nombre || 'Comercio Demo'}
               </div>
               <div>CUIT: {config?.cuit || empresa?.cuit || '-'}</div>
               <div>Cond. IVA: {config?.condicionIva || empresa?.condicionIva || '-'}</div>

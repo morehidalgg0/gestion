@@ -111,7 +111,7 @@ export async function getPreapprovalDetails(preapprovalId: string): Promise<any>
       id: preapprovalId,
       status: 'authorized',
       external_reference: 'demo-tenant-id',
-      payer_email: 'demo@dietetica.com',
+      payer_email: 'demo@comerciopro.com',
       reason: 'Suscripción mensual - Plan Básico',
     };
   }

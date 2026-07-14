@@ -88,7 +88,7 @@ export default function CheckoutPage() {
       {/* Top Navbar */}
       <header className="navbar" style={{ padding: '0 3rem' }}>
         <div className="sidebar-logo" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
-          🌿 DietéticaSaaS
+          ◼ ComercioPro
         </div>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
@@ -204,7 +204,7 @@ export default function CheckoutPage() {
       </main>
 
       <footer style={{ padding: '2rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
-        Plataforma SaaS Dietética. Pagos procesados de forma segura mediante Mercado Pago.
+        Plataforma de gestión comercial. Pagos procesados de forma segura mediante Mercado Pago.
       </footer>
     </div>
   );

@@ -54,7 +54,7 @@ async function main() {
   }
 
   // 2. Create SUPERADMIN User
-  const adminEmail = 'superadmin@dietetica.com';
+  const adminEmail = 'superadmin@comerciopro.com';
   const existingAdmin = await prisma.usuario.findUnique({
     where: { email: adminEmail },
   });
@@ -83,14 +83,14 @@ async function main() {
   if (!existingEmpresa) {
     const empresa = await prisma.empresa.create({
       data: {
-        nombre: 'Dietética Natural S.A.',
+        nombre: 'Comercio Demo S.A.',
         cuit: demoCuit,
         condicionIva: 'Responsable Inscripto',
         estado: 'ACTIVO',
         configAfip: {
           create: {
             cuit: demoCuit,
-            razonSocial: 'Dietética Natural S.A.',
+            razonSocial: 'Comercio Demo S.A.',
             condicionIva: 'Responsable Inscripto',
             puntoVenta: 1,
             modo: 'demo', // Starts in internal demo mode by default
@@ -116,7 +116,7 @@ async function main() {
     console.log('Linked basic plan subscription to demo empresa.');
 
     // Create Owner User for this Empresa
-    const ownerEmail = 'demo@dietetica.com';
+    const ownerEmail = 'demo@comerciopro.com';
     const ownerPasswordHash = hashPassword('demo123');
     await prisma.usuario.create({
       data: {

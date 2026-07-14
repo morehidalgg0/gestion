@@ -55,7 +55,7 @@ export default function LoginPage() {
       <div className="auth-sidebar">
         <h1 className="auth-sidebar-title">Gestión Inteligente para tu Comercio</h1>
         <p className="auth-sidebar-desc">
-          Entrá al panel de control de tu dietética, kiosco o almacén para facturar en segundos, ajustar stocks o cobrar cuentas corrientes de clientes.
+          Entrá al panel de control de tu comercio para facturar en segundos, ajustar stock, emitir comprobantes y controlar la caja diaria.
         </p>
       </div>
 
@@ -89,7 +89,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 className="form-input"
-                placeholder="ejemplo@dietetica.com"
+                placeholder="usuario@tucomercio.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

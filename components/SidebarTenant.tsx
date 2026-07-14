@@ -45,7 +45,7 @@ export default function SidebarTenant() {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        🌿 DietéticaSaaS
+        ◼ ComercioPro
       </div>
 
       <nav className="sidebar-nav">

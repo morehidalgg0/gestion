@@ -181,7 +181,7 @@ export default function ConfigAfipPage() {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Ej: Dietética Natural S.A."
+                placeholder="Ej: Comercial La Esquina S.A."
                 value={razonSocial}
                 onChange={(e) => setRazonSocial(e.target.value)}
                 required

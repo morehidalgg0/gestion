@@ -98,7 +98,7 @@ function DemoCheckoutContent() {
             fontSize: '0.95rem'
           }}>
             <p style={{ marginBottom: '0.5rem' }}>Concepto: <strong>Suscripción mensual - Plan {planNombre}</strong></p>
-            <p style={{ marginBottom: '0.5rem' }}>Comercio: <strong>Dietética ID: {empresaId.substring(0, 8)}...</strong></p>
+            <p style={{ marginBottom: '0.5rem' }}>Comercio: <strong>ID {empresaId.substring(0, 8)}...</strong></p>
             <p style={{ marginBottom: '0.5rem' }}>Email del Pagador: <strong>{email}</strong></p>
             <p style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-main)', marginTop: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem' }}>
               Total: ${parseFloat(precio).toLocaleString('es-AR')} ARS

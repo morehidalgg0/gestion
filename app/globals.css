@@ -2,26 +2,26 @@
 
 :root {
   /* Colors */
-  --bg-primary: #fbfaf7;
+  --bg-primary: #f6f8fb;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f5f3ef;
+  --bg-tertiary: #eef2f7;
   
-  --primary: #4d7c0f;      /* Olive Green */
-  --primary-hover: #3f6212;
-  --primary-light: #ecfdf5;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
   
-  --secondary: #78350f;    /* Earthy Brown */
-  --secondary-hover: #5f2a0c;
+  --secondary: #4f46e5;
+  --secondary-hover: #4338ca;
   
-  --accent: #f59e0b;       /* Warm Amber */
-  --accent-light: #fef3c7;
+  --accent: #06b6d4;
+  --accent-light: #ecfeff;
   
-  --text-main: #1c1917;    /* Charcoal */
-  --text-muted: #6b6661;   /* Soft Muted Gray */
+  --text-main: #111827;
+  --text-muted: #64748b;
   --text-on-primary: #ffffff;
   
-  --border-color: #e7e5e0;
-  --border-focus: #a3e635;
+  --border-color: #e2e8f0;
+  --border-focus: #93c5fd;
   
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);

@@ -188,7 +188,7 @@ export default function StaffPage() {
                   <input
                     type="email"
                     className="form-input"
-                    placeholder="sofia@dietetica.com"
+                    placeholder="sofia@tucomercio.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

@@ -1,6 +1,6 @@
 # Plataforma SaaS de Gestión Comercial y Facturación AFIP
 
-Este proyecto es una plataforma SaaS multi-tenant diseñada para comercios (dietéticas, almacenes, kioscos) en Argentina. Permite a los comerciantes gestionar su punto de venta (POS), controlar su stock (por peso o por unidad), registrar cuentas corrientes de clientes (fiados) y emitir facturas electrónicas válidas ante AFIP (ARCA) de forma automatizada. El sistema incluye una integración de suscripción mensual a través de Mercado Pago.
+Este proyecto es una plataforma SaaS multi-tenant diseñada para comercios de distintos rubros en Argentina. Permite gestionar punto de venta (POS), controlar stock, registrar cuentas corrientes de clientes (fiados), emitir facturas electrónicas válidas ante AFIP (ARCA) y realizar cierres de caja. El sistema incluye una integración de suscripción mensual a través de Mercado Pago.
 
 ## Características Clave
 - **Multi-tenancy estricto:** Aislamiento de datos comerciales por `empresaId`.
@@ -58,11 +58,11 @@ La aplicación estará disponible en [http://localhost:3000](http://localhost:30
 
 ## 🔑 Cuentas de Acceso Rápidas (Creadas por el Seed)
 - **Portal de Comercio Demo:**
-  - **Usuario:** `demo@dietetica.com`
+  - **Usuario:** `demo@comerciopro.com`
   - **Contraseña:** `demo123`
   - *Acceso directo a la caja registradora, productos de prueba con bajo stock, cuentas corrientes e historial.*
 - **Portal de Superadministrador (Dueño de la plataforma):**
-  - **Usuario:** `superadmin@dietetica.com`
+  - **Usuario:** `superadmin@comerciopro.com`
   - **Contraseña:** `admin123`
   - *Permite ver métricas de uso global, suspender cuentas de comercios o cambiar planes de suscripción.*
 

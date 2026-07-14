@@ -63,9 +63,9 @@ export default function RegisterPage() {
     <div className="auth-container">
       {/* Visual sidebar */}
       <div className="auth-sidebar">
-        <h1 className="auth-sidebar-title">Digitalizá tu Mostrador Hoy Mismo</h1>
+        <h1 className="auth-sidebar-title">Digitalizá la gestión de tu negocio</h1>
         <p className="auth-sidebar-desc">
-          Unite a los cientos de comercios en Argentina que optimizan sus ventas, controlan sus cuentas corrientes de clientes y emiten facturas oficiales sin perder tiempo.
+          Organizá ventas, stock, clientes, caja y facturación electrónica en una plataforma preparada para comercios de distintos rubros.
         </p>
       </div>
 
@@ -103,7 +103,7 @@ export default function RegisterPage() {
                 id="razonSocial"
                 type="text"
                 className="form-input"
-                placeholder="Dietética La Semilla S.H."
+                placeholder="Comercial La Esquina S.H."
                 value={razonSocial}
                 onChange={(e) => setRazonSocial(e.target.value)}
                 required
@@ -167,7 +167,7 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   className="form-input"
-                  placeholder="juan@dietetica.com"
+                  placeholder="juan@tucomercio.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

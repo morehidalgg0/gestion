@@ -6,7 +6,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="navbar" style={{ padding: '0 5rem', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)' }}>
         <div className="sidebar-logo" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
-          🌿 DietéticaSaaS
+          ◼ ComercioPro
         </div>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
           <Link href="/login" className="btn btn-secondary">
@@ -34,10 +34,10 @@ export default function LandingPage() {
             Facturación Electrónica ARCA/AFIP Integrada
           </span>
           <h1 style={{ fontSize: '3.5rem', color: 'var(--text-main)', marginBottom: '1.5rem', lineHeight: '1.15' }}>
-            Gestioná tu Dietética o Almacén sin complicaciones
+            Gestioná tu comercio sin complicaciones
           </h1>
           <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '2.5rem' }}>
-            Punto de venta rápido, control de stock por peso o unidad, cuentas corrientes de clientes (fiados) y facturas electrónicas A, B y C automáticas. Todo en la nube.
+            Punto de venta rápido, control de stock, cuentas corrientes, cierres de caja y facturas electrónicas A, B, C y X. Todo en una plataforma simple para cualquier rubro.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
             <Link href="/registro" className="btn btn-primary btn-lg">
@@ -53,20 +53,20 @@ export default function LandingPage() {
       {/* Features Section */}
       <section id="features" style={{ padding: '5rem 2rem', backgroundColor: 'var(--bg-secondary)' }}>
         <div className="container" style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '2.25rem', marginBottom: '3rem' }}>Funcionalidades pensadas para tu local</h2>
+          <h2 style={{ fontSize: '2.25rem', marginBottom: '3rem' }}>Funcionalidades para operar tu negocio</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
             <div className="card" style={{ padding: '2rem' }}>
               <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>🛒</div>
               <h3>Punto de Venta Simple</h3>
               <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Buscá productos por código o nombre, agregá al carrito y calculá subtotales e impuestos al instante. Venta rápida por peso o unidad.
+                Buscá productos por código o nombre, agregá al carrito y calculá subtotales e impuestos al instante. Venta rápida para mostrador o caja.
               </p>
             </div>
             <div className="card" style={{ padding: '2rem' }}>
               <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>📊</div>
               <h3>Factura Electrónica Real</h3>
               <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Conexión automática a AFIP con tus certificados digitales. Genera CAE oficial en segundos. O facturá de forma local en modo demo.
+                Conexión automática a AFIP con tus certificados digitales. Generá CAE oficial en segundos o trabajá en modo demo.
               </p>
             </div>
             <div className="card" style={{ padding: '2rem' }}>
@@ -162,7 +162,7 @@ export default function LandingPage() {
         fontSize: '0.9rem',
         borderTop: '1px solid var(--border-color)'
       }}>
-        <p>© 2026 DietéticaSaaS Platform. Diseñado y desarrollado para comercios en Argentina.</p>
+        <p>© 2026 ComercioPro. Gestión comercial y facturación para comercios en Argentina.</p>
         <p style={{ marginTop: '0.5rem', opacity: 0.6 }}>Todos los derechos reservados. ARCA / AFIP Web Services Integration.</p>
       </footer>
     </div>
