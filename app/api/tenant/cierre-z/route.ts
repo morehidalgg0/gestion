@@ -19,10 +19,6 @@ function getUserId(req: NextRequest): string {
   return userId;
 }
 
-function getUserRole(req: NextRequest): string {
-  return req.headers.get('x-user-rol') || '';
-}
-
 function getBusinessDay(dateValue?: string) {
   const date = dateValue || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
   const start = new Date(`${date}T00:00:00-03:00`);
@@ -176,19 +172,16 @@ export async function GET(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
     const usuarioId = getUserId(req);
-    const userRole = getUserRole(req);
     const { searchParams } = new URL(req.url);
     const { date, start, end } = getBusinessDay(searchParams.get('fecha') || undefined);
-    const cierreUsuarioId = userRole === 'OWNER' ? null : usuarioId;
 
     const caja = await getOrCreateCaja(empresaId, usuarioId, start);
     await ensureLegacyCierreZ(caja);
     const montoInicial = Number(caja.montoInicial);
-    const calculated = await calculateCierre(empresaId, cierreUsuarioId, start, end, montoInicial);
+    const calculated = await calculateCierre(empresaId, null, start, end, montoInicial);
     const cierres = await prisma.cierreCaja.findMany({
       where: {
         empresaId,
-        ...(cierreUsuarioId ? { usuarioId: cierreUsuarioId } : {}),
         fecha: start,
       },
       orderBy: { emitidoAt: 'desc' },
@@ -256,7 +249,6 @@ export async function POST(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
     const usuarioId = getUserId(req);
-    const userRole = getUserRole(req);
     const { fecha, tipo = 'Z' } = await req.json();
     const cierreTipo = String(tipo).toUpperCase();
 
@@ -265,20 +257,26 @@ export async function POST(req: NextRequest) {
     }
 
     const businessDay = getBusinessDay(fecha);
-    const cierreUsuarioId = userRole === 'OWNER' ? null : usuarioId;
     const caja = await getOrCreateCaja(empresaId, usuarioId, businessDay.start);
+    const cierreZEmpresa = await prisma.cierreCaja.findFirst({
+      where: {
+        empresaId,
+        fecha: businessDay.start,
+        tipo: 'Z',
+      },
+    });
 
-    if (cierreTipo === 'Z' && caja.cerradoAt) {
+    if (cierreTipo === 'Z' && (caja.cerradoAt || cierreZEmpresa)) {
       return NextResponse.json({ error: 'El cierre Z de este día ya fue emitido.' }, { status: 400 });
     }
 
-    if (cierreTipo === 'X' && caja.cerradoAt) {
+    if (cierreTipo === 'X' && (caja.cerradoAt || cierreZEmpresa)) {
       return NextResponse.json({ error: 'La caja ya tiene Cierre Z emitido. No se pueden emitir nuevos Cierres X para esta jornada.' }, { status: 400 });
     }
 
     const cierre = await calculateCierre(
       empresaId,
-      cierreUsuarioId,
+      null,
       businessDay.start,
       businessDay.end,
       Number(caja.montoInicial)

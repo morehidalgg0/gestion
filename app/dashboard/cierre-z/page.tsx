@@ -241,7 +241,7 @@ export default function CierreZPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <h3>Historial de cierres emitidos</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Comprobantes X/Z guardados para este cajero y día.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Comprobantes X/Z guardados para el local y día.</p>
             </div>
             {cierreZEmitido && <span className="badge badge-success">Jornada cerrada</span>}
           </div>

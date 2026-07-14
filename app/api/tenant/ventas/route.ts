@@ -58,7 +58,6 @@ export async function POST(req: NextRequest) {
         prisma.cierreCaja.findFirst({
           where: {
             empresaId,
-            usuarioId,
             fecha: start,
             tipo: 'Z',
           },
