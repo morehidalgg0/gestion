@@ -20,9 +20,9 @@ function DemoCheckoutContent() {
   useEffect(() => {
     async function fetchPlans() {
       try {
-        const res = await fetch('/api/superadmin/planes');
+        const res = await fetch('/api/planes');
         const data = await res.json();
-        setPlans(data);
+        setPlans(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching plans in demo checkout:', err);
       }
