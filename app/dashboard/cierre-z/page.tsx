@@ -2,7 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Banknote, CalendarDays, CheckCircle2, ClipboardCheck, Printer, Save } from 'lucide-react';
+import { Banknote, CalendarDays, CheckCircle2, ClipboardCheck, FileText, Printer, Save } from 'lucide-react';
+
+type CierreHistorial = {
+  id: string;
+  tipo: 'X' | 'Z';
+  fecha: string;
+  emitidoAt: string;
+  cerradoAt?: string | null;
+  concepto: string;
+  montoInicial: number;
+  facturadoTotal: number;
+  efectivoNeto: number;
+  totalCaja: number;
+  cantidadComprobantes: number;
+};
 
 type CierreZData = {
   id: string;
@@ -16,6 +30,7 @@ type CierreZData = {
   concepto: string;
   porFormaPago: Record<string, number>;
   cantidadComprobantes: number;
+  historial: CierreHistorial[];
   ventas: Array<{
     id: string;
     fecha: string;
@@ -51,7 +66,7 @@ export default function CierreZPage() {
   const [montoInicial, setMontoInicial] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [closing, setClosing] = useState(false);
+  const [closingType, setClosingType] = useState<'X' | 'Z' | null>(null);
   const [error, setError] = useState('');
 
   const loadCierre = async () => {
@@ -101,31 +116,34 @@ export default function CierreZPage() {
     }
   };
 
-  const handleEmitirCierre = async () => {
-    const confirmed = window.confirm('Vas a emitir el comprobante de Cierre Z del día. Una vez emitido, quedará guardado, se imprimirá y no se podrán registrar más ventas en esta jornada. ¿Continuar?');
+  const handleEmitirCierre = async (tipo: 'X' | 'Z') => {
+    const confirmed = window.confirm(
+      tipo === 'Z'
+        ? 'Vas a emitir el comprobante de Cierre Z del día. Una vez emitido, quedará guardado, se imprimirá y no se podrán registrar más ventas en esta jornada. ¿Continuar?'
+        : 'Vas a emitir un comprobante de Cierre X de control. Quedará guardado e imprimible, pero la jornada seguirá abierta para vender. ¿Continuar?'
+    );
     if (!confirmed) return;
 
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write('<p style="font-family: sans-serif; padding: 24px;">Generando comprobante de Cierre Z...</p>');
+      printWindow.document.write(`<p style="font-family: sans-serif; padding: 24px;">Generando comprobante de Cierre ${tipo}...</p>`);
       printWindow.document.close();
     }
 
-    setClosing(true);
+    setClosingType(tipo);
     setError('');
 
     try {
       const response = await fetch('/api/tenant/cierre-z', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fecha }),
+        body: JSON.stringify({ fecha, tipo }),
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'No se pudo emitir el cierre Z.');
+        throw new Error(result.error || `No se pudo emitir el cierre ${tipo}.`);
       }
-      setData(result);
-      setMontoInicial(String(result.montoInicial));
+      await loadCierre();
       const printUrl = `/dashboard/cierre-z/${result.id}/print`;
       if (printWindow) {
         printWindow.location.href = printUrl;
@@ -138,9 +156,11 @@ export default function CierreZPage() {
       }
       setError(err.message);
     } finally {
-      setClosing(false);
+      setClosingType(null);
     }
   };
+
+  const cierreZEmitido = !!data?.cerrado;
 
   return (
     <div>
@@ -148,10 +168,10 @@ export default function CierreZPage() {
         <div>
           <h2 style={{ fontSize: '1.75rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ClipboardCheck size={26} style={{ color: 'var(--primary)' }} />
-            <span>Cierre Z Diario</span>
+            <span>Cierres de Caja</span>
           </h2>
           <p style={{ color: 'var(--text-muted)' }}>
-            El Cierre Z se emite manualmente como comprobante de cierre diario y bloquea nuevas ventas para esta jornada.
+            Emití Cierre X para control o cambio de empleado, y Cierre Z para cerrar definitivamente la jornada.
           </p>
         </div>
 
@@ -160,9 +180,9 @@ export default function CierreZPage() {
             <Printer size={16} />
             <span>Imprimir</span>
           </button>
-          {data?.cerrado && data?.id && (
-            <a href={`/dashboard/cierre-z/${data.id}/print`} target="_blank" rel="noreferrer" className="btn btn-secondary">
-              Ver Comprobante Z
+          {data?.historial?.[0] && (
+            <a href={`/dashboard/cierre-z/${data.historial[0].id}/print`} target="_blank" rel="noreferrer" className="btn btn-secondary">
+              Ultimo Comprobante
             </a>
           )}
           <Link href="/dashboard/ventas" className="btn btn-primary">
@@ -198,22 +218,74 @@ export default function CierreZPage() {
               step="0.01"
               value={montoInicial}
               onChange={(e) => setMontoInicial(e.target.value)}
-              disabled={loading || saving || !!data?.cerrado}
+              disabled={loading || saving || cierreZEmitido}
             />
           </div>
-          <button onClick={handleSaveMontoInicial} className="btn btn-secondary" disabled={loading || saving || !!data?.cerrado}>
+          <button onClick={handleSaveMontoInicial} className="btn btn-secondary" disabled={loading || saving || cierreZEmitido}>
             <Save size={16} />
             <span>{saving ? 'Guardando...' : 'Guardar fondo'}</span>
           </button>
-          <button onClick={handleEmitirCierre} className="btn btn-primary" disabled={loading || closing || !!data?.cerrado}>
+          <button onClick={() => handleEmitirCierre('X')} className="btn btn-secondary" disabled={loading || !!closingType || cierreZEmitido}>
+            <FileText size={16} />
+            <span>{closingType === 'X' ? 'Emitiendo...' : 'Emitir Cierre X'}</span>
+          </button>
+          <button onClick={() => handleEmitirCierre('Z')} className="btn btn-primary" disabled={loading || !!closingType || cierreZEmitido}>
             <CheckCircle2 size={16} />
-            <span>{closing ? 'Emitiendo...' : 'Emitir Comprobante Z'}</span>
+            <span>{closingType === 'Z' ? 'Emitiendo...' : 'Emitir Cierre Z'}</span>
           </button>
         </div>
       </div>
 
+      {!loading && data && (
+        <div className="card no-print" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <h3>Historial de cierres emitidos</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Comprobantes X/Z guardados para este cajero y día.</p>
+            </div>
+            {cierreZEmitido && <span className="badge badge-success">Jornada cerrada</span>}
+          </div>
+
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Emitido</th>
+                  <th>Comprobantes</th>
+                  <th style={{ textAlign: 'right' }}>Total caja</th>
+                  <th style={{ textAlign: 'right' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.historial.map((cierre) => (
+                  <tr key={cierre.id}>
+                    <td><span className={`badge ${cierre.tipo === 'Z' ? 'badge-success' : 'badge-warning'}`}>Cierre {cierre.tipo}</span></td>
+                    <td>{new Date(cierre.emitidoAt).toLocaleString('es-AR')}</td>
+                    <td>{cierre.cantidadComprobantes}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(cierre.totalCaja)}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <a href={`/dashboard/cierre-z/${cierre.id}/print`} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">
+                        Ver / Imprimir
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+                {data.historial.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      Todavía no hay cierres emitidos para este día.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {loading || !data ? (
-        <p style={{ color: 'var(--text-muted)' }}>Calculando cierre Z...</p>
+        <p style={{ color: 'var(--text-muted)' }}>Calculando cierre de caja...</p>
       ) : (
         <div className="print-ticket">
           <div style={{ marginBottom: '1.5rem' }}>

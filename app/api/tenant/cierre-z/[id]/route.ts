@@ -17,7 +17,7 @@ export async function GET(
     const empresaId = getTenantId(req);
     const { id } = await params;
 
-    const cierre = await prisma.cajaDiaria.findFirst({
+    const cierre = await prisma.cierreCaja.findFirst({
       where: {
         id,
         empresaId,
@@ -38,20 +38,22 @@ export async function GET(
       },
     });
 
-    if (!cierre || !cierre.cerradoAt) {
-      return NextResponse.json({ error: 'Comprobante de cierre Z no encontrado.' }, { status: 404 });
+    if (!cierre) {
+      return NextResponse.json({ error: 'Comprobante de cierre no encontrado.' }, { status: 404 });
     }
 
     return NextResponse.json({
       id: cierre.id,
+      tipo: cierre.tipo,
       fecha: cierre.fecha,
-      cerradoAt: cierre.cerradoAt,
+      emitidoAt: cierre.emitidoAt,
+      cerradoAt: cierre.tipo === 'Z' ? cierre.emitidoAt : null,
       concepto: cierre.concepto,
       montoInicial: Number(cierre.montoInicial),
-      facturadoTotal: Number(cierre.facturadoTotal || 0),
-      efectivoNeto: Number(cierre.efectivoNeto || 0),
-      totalCaja: Number(cierre.totalCaja || 0),
-      cantidadComprobantes: cierre.cantidadComprobantes || 0,
+      facturadoTotal: Number(cierre.facturadoTotal),
+      efectivoNeto: Number(cierre.efectivoNeto),
+      totalCaja: Number(cierre.totalCaja),
+      cantidadComprobantes: cierre.cantidadComprobantes,
       detalle: cierre.detalle,
       empresa: cierre.empresa,
       usuario: cierre.usuario,

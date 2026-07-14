@@ -98,6 +98,31 @@ async function getOrCreateCaja(empresaId: string, usuarioId: string, fecha: Date
   });
 }
 
+function cierreConcepto(tipo: string) {
+  if (tipo === 'X') {
+    return 'Cierre X de control: corte parcial de caja para cambio o control de empleado, sin cerrar la jornada.';
+  }
+
+  return 'Cierre Z diario: total de comprobantes emitidos en el dia, discriminado por forma de pago y caja fisica esperada';
+}
+
+function toCierreResponse(cierre: any) {
+  return {
+    id: cierre.id,
+    tipo: cierre.tipo,
+    fecha: cierre.fecha,
+    emitidoAt: cierre.emitidoAt,
+    cerradoAt: cierre.tipo === 'Z' ? cierre.emitidoAt : null,
+    concepto: cierre.concepto,
+    montoInicial: Number(cierre.montoInicial),
+    facturadoTotal: Number(cierre.facturadoTotal),
+    efectivoNeto: Number(cierre.efectivoNeto),
+    totalCaja: Number(cierre.totalCaja),
+    cantidadComprobantes: cierre.cantidadComprobantes,
+    detalle: cierre.detalle,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
@@ -108,8 +133,16 @@ export async function GET(req: NextRequest) {
     const caja = await getOrCreateCaja(empresaId, usuarioId, start);
     const montoInicial = Number(caja.montoInicial);
     const calculated = await calculateCierre(empresaId, usuarioId, start, end, montoInicial);
-    const cierreGuardado = caja.detalle as any;
-    const cierre = caja.cerradoAt && cierreGuardado ? cierreGuardado : calculated;
+    const cierres = await prisma.cierreCaja.findMany({
+      where: {
+        empresaId,
+        usuarioId,
+        fecha: start,
+      },
+      orderBy: { emitidoAt: 'desc' },
+    });
+    const cierreZ = cierres.find((cierre) => cierre.tipo === 'Z');
+    const cierre = (cierreZ?.detalle as any) || calculated;
 
     return NextResponse.json({
       id: caja.id,
@@ -117,6 +150,7 @@ export async function GET(req: NextRequest) {
       cerrado: !!caja.cerradoAt,
       cerradoAt: caja.cerradoAt,
       concepto: caja.concepto,
+      historial: cierres.map(toCierreResponse),
       ...cierre,
     });
   } catch (error: any) {
@@ -170,12 +204,22 @@ export async function POST(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
     const usuarioId = getUserId(req);
-    const { fecha } = await req.json();
+    const { fecha, tipo = 'Z' } = await req.json();
+    const cierreTipo = String(tipo).toUpperCase();
+
+    if (!['X', 'Z'].includes(cierreTipo)) {
+      return NextResponse.json({ error: 'El tipo de cierre debe ser X o Z.' }, { status: 400 });
+    }
+
     const businessDay = getBusinessDay(fecha);
     const caja = await getOrCreateCaja(empresaId, usuarioId, businessDay.start);
 
-    if (caja.cerradoAt) {
+    if (cierreTipo === 'Z' && caja.cerradoAt) {
       return NextResponse.json({ error: 'El cierre Z de este día ya fue emitido.' }, { status: 400 });
+    }
+
+    if (cierreTipo === 'X' && caja.cerradoAt) {
+      return NextResponse.json({ error: 'La caja ya tiene Cierre Z emitido. No se pueden emitir nuevos Cierres X para esta jornada.' }, { status: 400 });
     }
 
     const cierre = await calculateCierre(
@@ -186,26 +230,54 @@ export async function POST(req: NextRequest) {
       Number(caja.montoInicial)
     );
 
-    const updated = await prisma.cajaDiaria.update({
-      where: { id: caja.id },
-      data: {
-        cerradoAt: new Date(),
-        concepto: 'Cierre Z diario: total de comprobantes emitidos en el dia, discriminado por forma de pago y caja fisica esperada',
-        facturadoTotal: cierre.facturadoTotal,
-        efectivoNeto: cierre.efectivoNeto,
-        totalCaja: cierre.totalCaja,
-        cantidadComprobantes: cierre.cantidadComprobantes,
-        detalle: cierre,
-      },
+    const concepto = cierreConcepto(cierreTipo);
+    const emitidoAt = new Date();
+    const comprobante = await prisma.$transaction(async (tx) => {
+      const created = await tx.cierreCaja.create({
+        data: {
+          empresaId,
+          usuarioId,
+          cajaDiariaId: caja.id,
+          tipo: cierreTipo,
+          fecha: businessDay.start,
+          emitidoAt,
+          concepto,
+          montoInicial: cierre.montoInicial,
+          facturadoTotal: cierre.facturadoTotal,
+          efectivoNeto: cierre.efectivoNeto,
+          totalCaja: cierre.totalCaja,
+          cantidadComprobantes: cierre.cantidadComprobantes,
+          detalle: cierre as any,
+        },
+      });
+
+      if (cierreTipo === 'Z') {
+        await tx.cajaDiaria.update({
+          where: { id: caja.id },
+          data: {
+            cerradoAt: emitidoAt,
+            concepto,
+            facturadoTotal: cierre.facturadoTotal,
+            efectivoNeto: cierre.efectivoNeto,
+            totalCaja: cierre.totalCaja,
+            cantidadComprobantes: cierre.cantidadComprobantes,
+            detalle: cierre as any,
+          },
+        });
+      }
+
+      return created;
     });
 
     return NextResponse.json({
       success: true,
-      id: updated.id,
+      id: comprobante.id,
+      tipo: comprobante.tipo,
       fecha: businessDay.date,
-      cerrado: true,
-      cerradoAt: updated.cerradoAt,
-      concepto: updated.concepto,
+      cerrado: cierreTipo === 'Z',
+      cerradoAt: cierreTipo === 'Z' ? comprobante.emitidoAt : null,
+      emitidoAt: comprobante.emitidoAt,
+      concepto: comprobante.concepto,
       ...cierre,
     });
   } catch (error: any) {

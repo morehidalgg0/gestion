@@ -23,6 +23,7 @@ model Empresa {
   suscripcion  Suscripcion?
   movimientos  MovimientoCuentaCorriente[]
   cajasDiarias CajaDiaria[]
+  cierresCaja  CierreCaja[]
 }
 
 model Usuario {
@@ -36,6 +37,7 @@ model Usuario {
   empresa      Empresa?  @relation(fields: [empresaId], references: [id])
   ventas       Venta[]
   cajasDiarias CajaDiaria[]
+  cierresCaja  CierreCaja[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -162,6 +164,28 @@ model CajaDiaria {
   updatedAt    DateTime @updatedAt
 
   @@unique([empresaId, usuarioId, fecha])
+}
+
+model CierreCaja {
+  id                    String   @id @default(uuid())
+  empresaId             String
+  empresa               Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuarioId             String
+  usuario               Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  cajaDiariaId          String?
+  tipo                  String   // 'X' o 'Z'
+  fecha                 DateTime
+  emitidoAt             DateTime @default(now())
+  concepto              String
+  montoInicial          Decimal  @db.Decimal(10, 2)
+  facturadoTotal        Decimal  @db.Decimal(10, 2)
+  efectivoNeto          Decimal  @db.Decimal(10, 2)
+  totalCaja             Decimal  @db.Decimal(10, 2)
+  cantidadComprobantes  Int
+  detalle               Json
+
+  @@index([empresaId, usuarioId, fecha])
+  @@index([empresaId, tipo, emitidoAt])
 }
 
 model VentaItem {

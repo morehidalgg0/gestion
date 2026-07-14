@@ -5,8 +5,10 @@ import { Printer, X } from 'lucide-react';
 
 type CierreZ = {
   id: string;
+  tipo: 'X' | 'Z';
   fecha: string;
-  cerradoAt: string;
+  emitidoAt: string;
+  cerradoAt?: string | null;
   concepto: string;
   montoInicial: number;
   facturadoTotal: number;
@@ -69,7 +71,7 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
         const response = await fetch(`/api/tenant/cierre-z/${id}`);
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data.error || 'No se pudo obtener el comprobante de cierre Z.');
+          throw new Error(data.error || 'No se pudo obtener el comprobante de cierre.');
         }
         setCierre(data);
       } catch (err: any) {
@@ -83,14 +85,14 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
   }, [id]);
 
   if (loading) {
-    return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando comprobante de cierre Z...</div>;
+    return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando comprobante de cierre...</div>;
   }
 
   if (error || !cierre) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center', color: '#ef4444' }}>
         <h3>Error</h3>
-        <p>{error || 'Comprobante de cierre Z no disponible.'}</p>
+        <p>{error || 'Comprobante de cierre no disponible.'}</p>
       </div>
     );
   }
@@ -102,6 +104,8 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
   const puntoVenta = config?.puntoVenta || 1;
   const ventas = cierre.detalle?.ventas || [];
   const porFormaPago = cierre.detalle?.porFormaPago || {};
+  const tituloCierre = `CIERRE ${cierre.tipo}`;
+  const subtituloCierre = cierre.tipo === 'Z' ? 'COMPROBANTE DE CIERRE DIARIO DE CAJA' : 'COMPROBANTE DE CONTROL PARCIAL DE CAJA';
 
   return (
     <div style={{ background: '#f5f5f5', minHeight: '100vh', padding: '1.5rem 0' }}>
@@ -116,7 +120,7 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Comprobante de Cierre Z</span>
+        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Comprobante de {tituloCierre}</span>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={() => window.print()} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
             <Printer size={14} />
@@ -140,8 +144,8 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
         color: '#000000'
       }}>
         <div style={{ border: '2px solid #000000', padding: '1rem', marginBottom: '1.25rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '1.3rem', fontWeight: 'bold' }}>CIERRE Z</div>
-          <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>COMPROBANTE DE CIERRE DIARIO DE CAJA</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 'bold' }}>{tituloCierre}</div>
+          <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>{subtituloCierre}</div>
           <div style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>ID: {cierre.id}</div>
         </div>
 
@@ -154,7 +158,7 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
           </div>
           <div style={{ textAlign: 'right' }}>
             <div>Fecha fiscal: {new Date(cierre.fecha).toLocaleDateString('es-AR')}</div>
-            <div>Emitido: {new Date(cierre.cerradoAt).toLocaleString('es-AR')}</div>
+            <div>Emitido: {new Date(cierre.emitidoAt).toLocaleString('es-AR')}</div>
             <div>Cajero: {cierre.usuario?.nombre || '-'}</div>
             <div>{cierre.usuario?.email || ''}</div>
           </div>
@@ -163,7 +167,11 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
         <div style={{ fontSize: '0.8rem', borderBottom: '1px dashed #000', paddingBottom: '1rem', marginBottom: '1rem' }}>
           <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>CONCEPTO</div>
           <div>{cierre.concepto}</div>
-          <div style={{ marginTop: '0.5rem' }}>Este comprobante consolida las ventas del día y deja cerrada la jornada para el usuario emisor.</div>
+          <div style={{ marginTop: '0.5rem' }}>
+            {cierre.tipo === 'Z'
+              ? 'Este comprobante consolida las ventas del día y deja cerrada la jornada para el usuario emisor.'
+              : 'Este comprobante consolida las ventas registradas hasta el momento sin cerrar la jornada.'}
+          </div>
         </div>
 
         <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', borderBottom: '1px dashed #000', paddingBottom: '1rem', marginBottom: '1rem' }}>
@@ -213,7 +221,7 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.7rem', fontWeight: 'bold' }}>
-          FIN DEL CIERRE Z - CONTADORES DE LA JORNADA CERRADOS
+          FIN DEL {tituloCierre} {cierre.tipo === 'Z' ? '- CONTADORES DE LA JORNADA CERRADOS' : '- CONTROL PARCIAL EMITIDO'}
         </div>
       </div>
 
