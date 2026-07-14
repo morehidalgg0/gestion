@@ -46,7 +46,7 @@ export default function ProductosPage() {
 
   const getPriceLabel = (product: any) => {
     const price = parseFloat(product.precioVenta).toLocaleString('es-AR');
-    if (product.unidad === 'g') return `$${price} / 100 g`;
+    if (product.unidad === 'g') return `$${price} / kg`;
     if (product.unidad === 'kg') return `$${price} / kg`;
     return `$${price} / unidad`;
   };
@@ -268,7 +268,7 @@ export default function ProductosPage() {
                     <label className="form-label">Unidad de Venta</label>
                     <select className="form-select" value={unidad} onChange={(e) => setUnidad(e.target.value)}>
                       <option value="kg">Por Kilogramo (kg)</option>
-                      <option value="g">Por 100 gramos (venta fraccionada en g)</option>
+                      <option value="g">Por kilogramo, venta fraccionada en gramos</option>
                       <option value="unidad">Por Unidad</option>
                     </select>
                   </div>
@@ -300,7 +300,7 @@ export default function ProductosPage() {
                     <input type="number" step="0.01" className="form-input" placeholder="0.00" value={precioCosto} onChange={(e) => setPrecioCosto(e.target.value)} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{unidad === 'g' ? 'Precio de Venta por 100 g (Con IVA) ($)' : 'Precio de Venta (Con IVA) ($)'}</label>
+                    <label className="form-label">{unidad === 'g' ? 'Precio de Venta por kg (Con IVA) ($)' : 'Precio de Venta (Con IVA) ($)'}</label>
                     <input type="number" step="0.01" className="form-input" placeholder="0.00" value={precioVenta} onChange={(e) => setPrecioVenta(e.target.value)} required />
                   </div>
                 </div>
@@ -366,7 +366,7 @@ export default function ProductosPage() {
                     <input type="number" step="0.01" className="form-input" value={nuevoPrecioCosto} onChange={(e) => setNuevoPrecioCosto(e.target.value)} required />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{selectedProduct.unidad === 'g' ? 'Actualizar Venta por 100 g (IVA Incl) ($)' : 'Actualizar Venta (IVA Incl) ($)'}</label>
+                    <label className="form-label">{selectedProduct.unidad === 'g' ? 'Actualizar Venta por kg (IVA Incl) ($)' : 'Actualizar Venta (IVA Incl) ($)'}</label>
                     <input type="number" step="0.01" className="form-input" value={nuevoPrecioVenta} onChange={(e) => setNuevoPrecioVenta(e.target.value)} required />
                   </div>
                 </div>

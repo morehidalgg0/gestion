@@ -69,7 +69,7 @@ export default function LandingPage() {
               <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>⚖️</div>
               <h3>Venta por Peso Exacto</h3>
               <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Configurá precios por kg, unidad o cada 100 g y cobrá cantidades fraccionadas calculando el importe exacto.
+                Configurá precios por kg o unidad y cobrá cantidades fraccionadas en gramos calculando el importe exacto.
               </p>
             </div>
             <div className="card" style={{ padding: '2rem' }}>

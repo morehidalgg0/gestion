@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const precioUnitario = prod.unidad === 'g' ? prod.precioVenta.toNumber() / 100 : prod.precioVenta.toNumber();
+      const precioUnitario = prod.unidad === 'g' ? prod.precioVenta.toNumber() / 1000 : prod.precioVenta.toNumber();
       const itemSubtotal = qty * precioUnitario;
       totalVenta += itemSubtotal;
 

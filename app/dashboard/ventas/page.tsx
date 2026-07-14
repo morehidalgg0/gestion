@@ -67,12 +67,12 @@ export default function PosPage() {
 
   const getEffectiveUnitPrice = (product: any) => {
     const price = parseFloat(product.precioVenta);
-    return product.unidad === 'g' ? price / 100 : price;
+    return product.unidad === 'g' ? price / 1000 : price;
   };
 
   const getPriceLabel = (product: any) => {
     const price = parseFloat(product.precioVenta).toLocaleString('es-AR');
-    if (product.unidad === 'g') return `$${price} / 100 g`;
+    if (product.unidad === 'g') return `$${price} / kg`;
     if (product.unidad === 'kg') return `$${price} / kg`;
     return `$${price} / unidad`;
   };
@@ -350,7 +350,7 @@ export default function PosPage() {
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       {item.unidad === 'g'
-                        ? `$${item.precioReferencia.toLocaleString('es-AR')} / 100 g`
+                        ? `$${item.precioReferencia.toLocaleString('es-AR')} / kg`
                         : `$${item.precioUnitario.toLocaleString('es-AR')} / ${item.unidad}`}
                     </span>
                     <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, display: 'block', marginTop: '0.25rem' }}>
