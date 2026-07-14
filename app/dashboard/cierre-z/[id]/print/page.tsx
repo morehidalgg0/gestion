@@ -261,9 +261,14 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
 
       <style jsx global>{`
         @media print {
+          @page { margin: 8mm; }
+          body * { visibility: hidden !important; }
+          .print-ticket, .print-ticket * { visibility: visible !important; }
           .no-print { display: none !important; }
+          .sidebar, .navbar { display: none !important; }
           body { background-color: #ffffff !important; padding: 0 !important; margin: 0 !important; }
-          .print-ticket { max-width: 100% !important; width: 100% !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+          .main-layout, .content-area, main, .container { display: block !important; width: 100% !important; max-width: none !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; background: #ffffff !important; }
+          .print-ticket { position: absolute !important; left: 0 !important; top: 0 !important; max-width: 100% !important; width: 100% !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
         }
       `}</style>
     </div>
