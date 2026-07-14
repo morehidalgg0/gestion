@@ -313,7 +313,7 @@ export default function PosPage() {
             <div className="pos-cart-items">
               {cart.map((item) => (
                 <div key={item.productoId} className="pos-cart-item">
-                  <div style={{ flex: 1, marginRight: '0.75rem' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'block' }}>
                       {item.nombre}
                     </span>
@@ -322,17 +322,23 @@ export default function PosPage() {
                         ? `$${item.precioReferencia.toLocaleString('es-AR')} / 100 g`
                         : `$${item.precioUnitario.toLocaleString('es-AR')} / ${item.unidad}`}
                     </span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, display: 'block', marginTop: '0.25rem' }}>
+                      Subtotal: ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input
-                      type="number"
-                      step={item.unidad === 'g' || item.unidad === 'unidad' ? '1' : '0.001'}
-                      className="form-input"
-                      style={{ width: '80px', padding: '0.35rem 0.5rem', textAlign: 'center' }}
-                      value={item.cantidad}
-                      onChange={(e) => updateCartQty(item.productoId, e.target.value)}
-                    />
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
+                      <input
+                        type="number"
+                        step={item.unidad === 'g' || item.unidad === 'unidad' ? '1' : '0.001'}
+                        className="form-input"
+                        style={{ width: '90px', padding: '0.35rem 0.5rem', textAlign: 'center' }}
+                        value={item.cantidad}
+                        onChange={(e) => updateCartQty(item.productoId, e.target.value)}
+                      />
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.unidad}</span>
+                    </div>
                     <button
                       onClick={() => removeFromCart(item.productoId)}
                       className="btn btn-secondary btn-sm"
