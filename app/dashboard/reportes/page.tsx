@@ -35,7 +35,7 @@ export default function ReportesPage() {
   }
 
   // Find max payment method value to calculate percentage width
-  const maxPaymentMethodValue = data?.paymentMethods?.reduce((max: number, curr: any) => Math.max(max, curr.total), 0) || 1;
+  const maxPaymentMethodValue = data?.paymentMethods?.reduce((max: number, curr: any) => Math.max(max, Math.abs(curr.total)), 0) || 1;
 
   return (
     <div>
@@ -150,7 +150,7 @@ export default function ReportesPage() {
           <h3 style={{ marginBottom: '1.25rem' }}>Distribución de Formas de Pago</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0.5rem 0' }}>
             {data?.paymentMethods.map((pm: any) => {
-              const pct = (pm.total / maxPaymentMethodValue) * 100;
+              const pct = (Math.abs(pm.total) / maxPaymentMethodValue) * 100;
               return (
                 <div key={pm.metodo}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', fontSize: '0.95rem' }}>

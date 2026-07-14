@@ -9,72 +9,77 @@ function getTenantId(req: NextRequest): string {
   return empresaId;
 }
 
+function getDateLimit(periodo: string) {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+  const dateLimit = new Date(`${today}T00:00:00-03:00`);
+
+  if (periodo === 'semana') {
+    dateLimit.setDate(dateLimit.getDate() - 7);
+  } else if (periodo === 'mes') {
+    dateLimit.setDate(dateLimit.getDate() - 30);
+  } else if (periodo === 'todos') {
+    dateLimit.setFullYear(dateLimit.getFullYear() - 5);
+  }
+
+  return dateLimit;
+}
+
+function signedTotal(tipoComprobante: string, total: unknown) {
+  const amount = Number(total);
+  return tipoComprobante.startsWith('Nota de Crédito') ? -amount : amount;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
     const { searchParams } = new URL(req.url);
     const periodo = searchParams.get('periodo') || 'mes'; // 'dia', 'semana', 'mes', 'todos'
 
-    // Compute date boundary
-    const dateLimit = new Date();
-    if (periodo === 'dia') {
-      dateLimit.setHours(0, 0, 0, 0);
-    } else if (periodo === 'semana') {
-      dateLimit.setDate(dateLimit.getDate() - 7);
-      dateLimit.setHours(0, 0, 0, 0);
-    } else if (periodo === 'mes') {
-      dateLimit.setDate(dateLimit.getDate() - 30);
-      dateLimit.setHours(0, 0, 0, 0);
-    } else {
-      // 'todos' - e.g. 5 years ago
-      dateLimit.setFullYear(dateLimit.getFullYear() - 5);
-    }
+    const dateLimit = getDateLimit(periodo);
 
-    // 1. Total sales and taxes
-    const salesStats = await prisma.venta.aggregate({
+    const ventas = await prisma.venta.findMany({
       where: {
         empresaId,
         fecha: { gte: dateLimit },
         estado: { in: ['COMPLETADO', 'DEMO'] },
       },
-      _sum: {
-        total: true,
-        iva: true,
-        subtotal: true,
-      },
-      _count: {
-        id: true,
+      include: {
+        items: true,
       },
     });
+
+    const stats = ventas.reduce(
+      (acc, venta) => {
+        const multiplier = venta.tipoComprobante.startsWith('Nota de Crédito') ? -1 : 1;
+        acc.totalVentas += multiplier * venta.total.toNumber();
+        acc.totalIva += multiplier * venta.iva.toNumber();
+        acc.totalNeto += multiplier * venta.subtotal.toNumber();
+        acc.cantidadVentas += 1;
+        return acc;
+      },
+      { totalVentas: 0, totalIva: 0, totalNeto: 0, cantidadVentas: 0 }
+    );
 
     // 2. Best Selling Products (grouped)
-    const bestSellersRaw = await prisma.ventaItem.groupBy({
-      by: ['productoId', 'productoName'],
-      where: {
-        venta: {
-          empresaId,
-          fecha: { gte: dateLimit },
-          estado: { in: ['COMPLETADO', 'DEMO'] },
-        },
-      },
-      _sum: {
-        cantidad: true,
-        subtotal: true,
-      },
-      orderBy: {
-        _sum: {
-          cantidad: 'desc',
-        },
-      },
-      take: 5,
-    });
+    const bestSellersMap = new Map<string, { id: string; nombre: string; cantidad: number; total: number }>();
+    for (const venta of ventas) {
+      if (!venta.tipoComprobante.startsWith('Factura')) continue;
+      for (const item of venta.items) {
+        const current = bestSellersMap.get(item.productoId) || {
+          id: item.productoId,
+          nombre: item.productoName,
+          cantidad: 0,
+          total: 0,
+        };
+        current.cantidad += item.cantidad.toNumber();
+        current.total += item.subtotal.toNumber();
+        bestSellersMap.set(item.productoId, current);
+      }
+    }
 
-    const bestSellers = bestSellersRaw.map((item) => ({
-      id: item.productoId,
-      nombre: item.productoName,
-      cantidad: item._sum.cantidad?.toNumber() || 0,
-      total: item._sum.subtotal?.toNumber() || 0,
-    }));
+    const bestSellers = Array.from(bestSellersMap.values())
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 5);
 
     // 3. Debtor Clients (sorted highest to lowest debt)
     const debtors = await prisma.cliente.findMany({
@@ -98,26 +103,18 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => a.stockActual.toNumber() - b.stockActual.toNumber())
       .slice(0, 10);
 
-    // 5. Sales by Payment Method
-    const salesByPaymentMethod = await prisma.venta.groupBy({
-      by: ['formaPago'],
-      where: {
-        empresaId,
-        fecha: { gte: dateLimit },
-        estado: { in: ['COMPLETADO', 'DEMO'] },
-      },
-      _sum: {
-        total: true,
-      },
-    });
+    const paymentMethodsMap = ventas.reduce<Record<string, number>>((acc, venta) => {
+      acc[venta.formaPago] = (acc[venta.formaPago] || 0) + signedTotal(venta.tipoComprobante, venta.total);
+      return acc;
+    }, {});
 
     return NextResponse.json({
       periodo,
       stats: {
-        totalVentas: salesStats._sum.total?.toNumber() || 0,
-        totalIva: salesStats._sum.iva?.toNumber() || 0,
-        totalNeto: salesStats._sum.subtotal?.toNumber() || 0,
-        cantidadVentas: salesStats._count.id || 0,
+        totalVentas: stats.totalVentas,
+        totalIva: stats.totalIva,
+        totalNeto: stats.totalNeto,
+        cantidadVentas: stats.cantidadVentas,
       },
       bestSellers,
       debtors: debtors.map((d) => ({
@@ -134,10 +131,7 @@ export async function GET(req: NextRequest) {
         min: p.stockMinimo.toNumber(),
         unidad: p.unidad,
       })),
-      paymentMethods: salesByPaymentMethod.map((item) => ({
-        metodo: item.formaPago,
-        total: item._sum.total?.toNumber() || 0,
-      })),
+      paymentMethods: Object.entries(paymentMethodsMap).map(([metodo, total]) => ({ metodo, total })),
     });
   } catch (error: any) {
     console.error('Reports endpoint error:', error);
