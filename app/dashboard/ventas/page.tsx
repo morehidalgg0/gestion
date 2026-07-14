@@ -110,7 +110,7 @@ export default function PosPage() {
     const availableStock = product.stockActual;
 
     if (existing) {
-      const nextQty = existing.cantidad + (product.unidad === 'g' ? 100 : 1);
+      const nextQty = existing.cantidad + (product.unidad === 'g' ? 100 : product.unidad === 'kg' ? 0.1 : 1);
       if (nextQty > availableStock) {
         alert(`No podés agregar más de este producto. Stock disponible: ${availableStock} ${product.unidad}`);
         return;
@@ -123,7 +123,7 @@ export default function PosPage() {
         )
       );
     } else {
-      const initialQty = product.unidad === 'g' ? 100 : 1;
+      const initialQty = product.unidad === 'g' ? 100 : product.unidad === 'kg' ? 0.1 : 1;
       if (initialQty > availableStock) {
         alert(`Stock insuficiente. Disponible: ${availableStock} ${product.unidad}`);
         return;
@@ -149,12 +149,11 @@ export default function PosPage() {
   };
 
   const updateCartQty = (productoId: string, value: string) => {
-    const qty = parseFloat(value);
-    if (isNaN(qty) || qty <= 0) return;
-
-    // Find original product to check stock
     const item = cart.find((i) => i.productoId === productoId);
     const originalProd = productos.find((p) => p.id === productoId);
+    const enteredQty = parseFloat(value);
+    const qty = item?.unidad === 'kg' ? enteredQty / 1000 : enteredQty;
+    if (isNaN(qty) || qty <= 0) return;
 
     if (item && originalProd) {
       if (qty > originalProd.stockActual) {
@@ -212,6 +211,25 @@ export default function PosPage() {
   };
 
   const totals = calculateCartTotals();
+
+  const getCartInputValue = (item: any) => {
+    if (item.unidad === 'kg') return Math.round(item.cantidad * 1000);
+    return item.cantidad;
+  };
+
+  const getCartInputUnit = (item: any) => {
+    if (item.unidad === 'kg' || item.unidad === 'g') return 'gramos';
+    return item.unidad;
+  };
+
+  const getCartPriceHint = (item: any) => {
+    if (item.unidad === 'kg' || item.unidad === 'g') {
+      const grams = item.unidad === 'kg' ? item.cantidad * 1000 : item.cantidad;
+      return `${Math.round(grams)} g x $${item.precioReferencia.toLocaleString('es-AR')} / kg`;
+    }
+
+    return `${item.cantidad} ${item.unidad} x $${item.precioUnitario.toLocaleString('es-AR')}`;
+  };
 
   const handleCheckout = async () => {
     if (cajaCerrada.cerrado) {
@@ -375,33 +393,38 @@ export default function PosPage() {
             {/* Cart Items list */}
             <div className="pos-cart-items">
               {cart.map((item) => (
-                <div key={item.productoId} className="pos-cart-item">
+                <div key={item.productoId} className="pos-cart-item" style={{ alignItems: 'stretch', gap: '0.75rem', padding: '0.9rem 0' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'block' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1.05rem', display: 'block', color: 'var(--text-primary)' }}>
                       {item.nombre}
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      {item.unidad === 'g'
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.15rem' }}>
+                      {item.unidad === 'g' || item.unidad === 'kg'
                         ? `$${item.precioReferencia.toLocaleString('es-AR')} / kg`
                         : `$${item.precioUnitario.toLocaleString('es-AR')} / ${item.unidad}`}
                     </span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--primary)', fontWeight: 700, display: 'block', marginTop: '0.25rem' }}>
-                      Subtotal: ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
+                      {getCartPriceHint(item)}
+                    </span>
+                    <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: 900, display: 'block', marginTop: '0.35rem' }}>
+                      ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-end' }}>
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'stretch', minWidth: '124px' }}>
+                      <label style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Cantidad</label>
                       <input
                         type="number"
-                        step={item.unidad === 'g' || item.unidad === 'unidad' ? '1' : '0.001'}
+                        step={item.unidad === 'unidad' ? '1' : '1'}
+                        min="1"
                         className="form-input"
-                        style={{ width: '90px', padding: '0.35rem 0.5rem', textAlign: 'center' }}
-                        value={item.cantidad}
+                        style={{ width: '124px', padding: '0.65rem 0.75rem', textAlign: 'center', fontSize: '1.15rem', fontWeight: 800 }}
+                        value={getCartInputValue(item)}
                         onChange={(e) => updateCartQty(item.productoId, e.target.value)}
                         disabled={cajaCerrada.cerrado}
                       />
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{item.unidad}</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 800, textAlign: 'center' }}>{getCartInputUnit(item)}</span>
                     </div>
                     <button
                       onClick={() => removeFromCart(item.productoId)}

@@ -482,7 +482,7 @@ a:hover {
 /* POS checkout specific layout */
 .pos-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(380px, 420px);
+  grid-template-columns: minmax(0, 1fr) minmax(460px, 520px);
   gap: 1.5rem;
   align-items: start;
   min-height: calc(100vh - 150px);
@@ -497,7 +497,7 @@ a:hover {
 
 .pos-cart {
   background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--primary-light);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
@@ -505,7 +505,7 @@ a:hover {
   top: 88px;
   height: calc(100vh - 110px);
   max-height: calc(100vh - 110px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 18px 45px rgba(30, 64, 175, 0.16);
   min-height: 0;
   overflow: hidden;
 }
@@ -535,8 +535,9 @@ a:hover {
 }
 
 .pos-cart-header {
-  padding: 1.25rem;
+  padding: 1.25rem 1.4rem;
   border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -545,7 +546,7 @@ a:hover {
 .pos-cart-items {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 1.25rem;
+  padding: 1rem 1.4rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -563,7 +564,7 @@ a:hover {
 }
 
 .pos-cart-summary {
-  padding: 1rem 1.25rem;
+  padding: 1rem 1.4rem;
   background-color: var(--bg-tertiary);
   border-top: 1px solid var(--border-color);
   display: flex;
