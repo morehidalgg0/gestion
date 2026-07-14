@@ -14,7 +14,7 @@ export interface InvoiceRequest {
   razonSocialEmisor: string;
   condicionIvaEmisor: 'Responsable Inscripto' | 'Monotributista';
   puntoVenta: number;
-  tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C';
+  tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C' | 'Factura X';
   clienteTipoDoc: string; // 'DNI', 'CUIT', '99' (Sin Identificar)
   clienteNroDoc: string;
   items: InvoiceItem[];
@@ -60,6 +60,14 @@ function getDocTipoCode(tipo: string): number {
  * Otherwise, it communicates with ARCA (AFIP) Web Services.
  */
 export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult> {
+  if (req.tipoComprobante === 'Factura X') {
+    return {
+      estado: 'DEMO',
+      numeroComprobante: 0,
+      mensajeAfip: 'DOCUMENTO NO VALIDO COMO FACTURA - COMPROBANTE X',
+    };
+  }
+
   const cbteTipo = getCbteTipoCode(req.tipoComprobante);
   const docTipo = getDocTipoCode(req.clienteTipoDoc);
   const docNro = docTipo === 99 ? 0 : parseInt(req.clienteNroDoc.replace(/\D/g, ''), 10) || 0;

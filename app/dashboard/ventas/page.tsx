@@ -12,6 +12,7 @@ export default function PosPage() {
   const [cart, setCart] = useState<any[]>([]);
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [formaPago, setFormaPago] = useState('Efectivo');
+  const [tipoComprobanteSeleccionado, setTipoComprobanteSeleccionado] = useState('auto');
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -178,6 +179,7 @@ export default function PosPage() {
         body: JSON.stringify({
           clienteId: selectedClienteId,
           formaPago,
+          tipoComprobante: tipoComprobanteSeleccionado === 'Factura X' ? 'Factura X' : undefined,
           items: cart.map((item) => ({
             productoId: item.productoId,
             cantidad: item.cantidad,
@@ -352,6 +354,20 @@ export default function PosPage() {
                 </select>
               </div>
 
+              {/* Invoice Type Select */}
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>Tipo de Comprobante</label>
+                <select
+                  className="form-select"
+                  style={{ padding: '0.5rem 0.75rem', fontSize: '0.9rem' }}
+                  value={tipoComprobanteSeleccionado}
+                  onChange={(e) => setTipoComprobanteSeleccionado(e.target.value)}
+                >
+                  <option value="auto">📄 AFIP Fiscal (Automático A/B/C)</option>
+                  <option value="Factura X">❌ Ticket X (No Fiscal / Factura X)</option>
+                </select>
+              </div>
+
               {/* Tax totals */}
               <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -427,13 +443,25 @@ export default function PosPage() {
                 </div>
               )}
             </div>
-            <div className="modal-footer">
-              <button
-                onClick={() => setSuccessResult(null)}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
+            <div className="modal-footer" style={{ display: 'flex', gap: '0.5rem' }}>
+              <a
+                href={`/dashboard/ventas/${successResult.id}/print`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary"
+                style={{ flex: 1, textAlign: 'center', textDecoration: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.25rem' }}
               >
-                Cerrar y Continuar Venta
+                🖨️ Imprimir
+              </a>
+              <button
+                onClick={() => {
+                  setSuccessResult(null);
+                  setTipoComprobanteSeleccionado('auto'); // Reset selection
+                }}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Continuar
               </button>
             </div>
           </div>

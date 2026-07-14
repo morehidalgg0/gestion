@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse input
-    const { clienteId, formaPago, items } = await req.json();
+    const { clienteId, formaPago, items, tipoComprobante: manualTipoComprobante } = await req.json();
 
     if (!clienteId || !formaPago || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Faltan campos obligatorios para registrar la venta.' }, { status: 400 });
@@ -170,11 +170,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 6. Automatically Determine Invoice Type
-    // Monotributistas only issue Factura C.
-    // Responsable Inscripto issues Factura A to Responsable Inscripto, and Factura B to others.
-    let tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C' = 'Factura B';
-    if (empresa.condicionIva === 'Monotributista') {
+    // 6. Determine Invoice Type (Fiscal A/B/C or Manual Non-Fiscal X)
+    let tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C' | 'Factura X' = 'Factura B';
+    if (manualTipoComprobante === 'Factura X') {
+      tipoComprobante = 'Factura X';
+    } else if (empresa.condicionIva === 'Monotributista') {
       tipoComprobante = 'Factura C';
     } else if (empresa.condicionIva === 'Responsable Inscripto') {
       if (cliente.condicionIva === 'Responsable Inscripto') {
