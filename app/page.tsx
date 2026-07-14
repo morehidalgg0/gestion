@@ -55,7 +55,7 @@ export default function LandingPage() {
         <div className="container" style={{ textAlign: 'center' }}>
           <h2 style={{ fontSize: '2.25rem', marginBottom: '1rem' }}>Funcionalidades para operar tu negocio</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '3rem', fontSize: '1.1rem' }}>
-            Todo lo que necesitás para vender, facturar, controlar caja y administrar tu comercio desde un solo lugar.
+            Enfocado en las operaciones que más impactan en el mostrador, la caja y la facturación.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
             <div className="card" style={{ padding: '2rem' }}>
@@ -63,13 +63,6 @@ export default function LandingPage() {
               <h3>Punto de Venta Simple</h3>
               <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
                 Buscá productos por código o nombre, agregá al carrito y calculá subtotales e impuestos al instante. Venta rápida para mostrador o caja.
-              </p>
-            </div>
-            <div className="card" style={{ padding: '2rem' }}>
-              <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>📦</div>
-              <h3>Stock y Productos</h3>
-              <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Cargá productos, ajustá precios, registrá ingresos o mermas y recibí alertas de stock mínimo para reponer a tiempo.
               </p>
             </div>
             <div className="card" style={{ padding: '2rem' }}>
@@ -94,13 +87,6 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="card" style={{ padding: '2rem' }}>
-              <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>💵</div>
-              <h3>Cuentas Corrientes</h3>
-              <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Llevá el control de saldos pendientes de tus clientes (fiados), registrá entregas de dinero y definí límites de crédito por persona.
-              </p>
-            </div>
-            <div className="card" style={{ padding: '2rem' }}>
               <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>✅</div>
               <h3>Cierre Z Manual</h3>
               <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
@@ -108,24 +94,10 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="card" style={{ padding: '2rem' }}>
-              <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>👥</div>
-              <h3>Clientes y Personal</h3>
-              <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Administrá clientes, datos fiscales y usuarios empleados con permisos para vender, cargar productos, cerrar caja y emitir notas de crédito.
-              </p>
-            </div>
-            <div className="card" style={{ padding: '2rem' }}>
               <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>📈</div>
               <h3>Reportes Comerciales</h3>
               <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
                 Analizá ventas, IVA, formas de pago, productos más vendidos y clientes con deuda para tomar mejores decisiones.
-              </p>
-            </div>
-            <div className="card" style={{ padding: '2rem' }}>
-              <div className="stat-icon" style={{ margin: '0 auto 1.5rem' }}>🔐</div>
-              <h3>Planes y Suscripción</h3>
-              <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Activá tu cuenta con planes comerciales, límites por ventas y usuarios, integración con Mercado Pago y modo demo para pruebas.
               </p>
             </div>
           </div>
