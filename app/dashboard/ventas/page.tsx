@@ -411,7 +411,7 @@ export default function PosPage() {
 
               <button
                 onClick={handleCheckout}
-                className="btn btn-primary btn-lg"
+                className="btn btn-primary btn-lg pos-checkout-button"
                 style={{ width: '100%', padding: '0.85rem' }}
                 disabled={submitting || cart.length === 0}
               >
