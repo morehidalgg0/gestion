@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingCart, Package, Users, DollarSign, Settings, BarChart2, LogOut, ShieldAlert } from 'lucide-react';
+import { ShoppingCart, Package, Users, DollarSign, Settings, BarChart2, LogOut, ShieldAlert, ReceiptText } from 'lucide-react';
 
 export default function SidebarTenant() {
   const pathname = usePathname();
@@ -32,6 +32,7 @@ export default function SidebarTenant() {
 
   const navItems = [
     { name: 'Punto de Venta (POS)', href: '/dashboard/ventas', icon: ShoppingCart },
+    { name: 'Comprobantes', href: '/dashboard/comprobantes', icon: ReceiptText, ownerOnly: true },
     { name: 'Productos / Stock', href: '/dashboard/productos', icon: Package },
     { name: 'Clientes', href: '/dashboard/clientes', icon: Users },
     { name: 'Cuentas Corrientes', href: '/dashboard/cuentas-corrientes', icon: DollarSign },
@@ -47,7 +48,7 @@ export default function SidebarTenant() {
       </div>
 
       <nav className="sidebar-nav">
-        {navItems.map((item) => {
+        {navItems.filter((item) => !item.ownerOnly || session?.rol === 'OWNER').map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
 
