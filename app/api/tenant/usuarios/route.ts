@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
         nombre: true,
         email: true,
         rol: true,
+        activo: true,
         createdAt: true,
       },
       orderBy: { nombre: 'asc' },
@@ -104,6 +105,7 @@ export async function POST(req: NextRequest) {
         nombre: true,
         email: true,
         rol: true,
+        activo: true,
         createdAt: true,
       },
     });

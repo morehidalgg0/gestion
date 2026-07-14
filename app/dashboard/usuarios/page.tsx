@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Shield, Plus, Key, Mail, User } from 'lucide-react';
+import { Shield, Plus, Key, Mail, User, Pencil, Ban, RotateCcw } from 'lucide-react';
 
 export default function StaffPage() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
   // Form states
   const [nombre, setNombre] = useState('');
@@ -15,6 +17,7 @@ export default function StaffPage() {
   const [rol, setRol] = useState('EMPLOYEE');
   
   const [errorMsg, setErrorMsg] = useState('');
+  const [editErrorMsg, setEditErrorMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const loadStaff = async () => {
@@ -71,6 +74,79 @@ export default function StaffPage() {
     }
   };
 
+  const openEditModal = (user: any) => {
+    setSelectedUser(user);
+    setNombre(user.nombre);
+    setEmail(user.email);
+    setRol(user.rol);
+    setPassword('');
+    setEditErrorMsg('');
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setSelectedUser(null);
+    setNombre('');
+    setEmail('');
+    setPassword('');
+    setRol('EMPLOYEE');
+    setEditErrorMsg('');
+  };
+
+  const handleEditStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+
+    setEditErrorMsg('');
+    setSubmitting(true);
+
+    try {
+      const res = await fetch(`/api/tenant/usuarios/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre,
+          email,
+          rol,
+          password: password || undefined,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo actualizar el usuario.');
+      }
+
+      closeEditModal();
+      loadStaff();
+    } catch (err: any) {
+      setEditErrorMsg(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleActive = async (user: any) => {
+    const action = user.activo ? 'dar de baja' : 'reactivar';
+    if (!window.confirm(`Vas a ${action} a ${user.nombre}. ¿Continuar?`)) return;
+
+    try {
+      const res = await fetch(`/api/tenant/usuarios/${user.id}`, {
+        method: user.activo ? 'DELETE' : 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: user.activo ? undefined : JSON.stringify({ activo: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo cambiar el estado del usuario.');
+      }
+      loadStaff();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -97,7 +173,9 @@ export default function StaffPage() {
                   <th>Nombre</th>
                   <th>Email / Usuario</th>
                   <th>Rol / Acceso</th>
+                  <th>Estado</th>
                   <th>Fecha de Alta</th>
+                  <th style={{ textAlign: 'center' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -110,8 +188,25 @@ export default function StaffPage() {
                         {u.rol === 'OWNER' ? 'Administrador (Dueño)' : 'Cajero / Empleado'}
                       </span>
                     </td>
+                    <td>
+                      <span className={`badge ${u.activo ? 'badge-success' : 'badge-danger'}`}>
+                        {u.activo ? 'Activo' : 'Baja'}
+                      </span>
+                    </td>
                     <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       {new Date(u.createdAt).toLocaleDateString('es-AR')}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button onClick={() => openEditModal(u)} className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.6rem' }}>
+                          <Pencil size={14} />
+                          <span>Editar</span>
+                        </button>
+                        <button onClick={() => handleToggleActive(u)} className={u.activo ? 'btn btn-danger btn-sm' : 'btn btn-secondary btn-sm'} style={{ padding: '0.35rem 0.6rem' }}>
+                          {u.activo ? <Ban size={14} /> : <RotateCcw size={14} />}
+                          <span>{u.activo ? 'Baja' : 'Reactivar'}</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -233,6 +328,55 @@ export default function StaffPage() {
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
                   {submitting ? 'Creando cuenta...' : 'Crear Usuario'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT STAFF MODAL */}
+      {showEditModal && selectedUser && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Editar Usuario</h3>
+              <button onClick={closeEditModal} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem' }}>X</button>
+            </div>
+            <form onSubmit={handleEditStaff}>
+              <div className="modal-body">
+                {editErrorMsg && (
+                  <div style={{ padding: '0.85rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.9rem', fontWeight: 500 }}>
+                    {editErrorMsg}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Nombre Completo</label>
+                  <input type="text" className="form-input" value={nombre} onChange={(e) => setNombre(e.target.value)} required disabled={submitting} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Correo Electrónico</label>
+                  <input type="email" className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={submitting} />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Rol de Acceso</label>
+                    <select className="form-select" value={rol} onChange={(e) => setRol(e.target.value)} disabled={submitting}>
+                      <option value="EMPLOYEE">Cajero / Empleado</option>
+                      <option value="OWNER">Administrador / Owner</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Resetear Contraseña</label>
+                    <input type="password" className="form-input" placeholder="Dejar vacío para no cambiar" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} disabled={submitting} />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={closeEditModal} className="btn btn-secondary" disabled={submitting}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Guardando...' : 'Guardar Cambios'}</button>
               </div>
             </form>
           </div>

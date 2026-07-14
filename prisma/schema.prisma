@@ -31,6 +31,7 @@ model Usuario {
   email        String    @unique
   passwordHash String
   rol          String    // 'SUPERADMIN', 'OWNER', 'EMPLOYEE'
+  activo       Boolean   @default(true)
   empresaId    String?   // Nulo si el rol es SUPERADMIN
   empresa      Empresa?  @relation(fields: [empresaId], references: [id])
   ventas       Venta[]

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Banknote, CalendarDays, CheckCircle2, ClipboardCheck, Printer, Save } from 'lucide-react';
 
 type CierreZData = {
+  id: string;
   fecha: string;
   montoInicial: number;
   facturadoTotal: number;
@@ -101,7 +102,7 @@ export default function CierreZPage() {
   };
 
   const handleEmitirCierre = async () => {
-    const confirmed = window.confirm('Vas a emitir el Cierre Z manual del día. Una vez emitido, quedará guardado y no se podrá modificar el fondo inicial. ¿Continuar?');
+    const confirmed = window.confirm('Vas a emitir el comprobante de Cierre Z del día. Una vez emitido, quedará guardado, se imprimirá y no se podrán registrar más ventas en esta jornada. ¿Continuar?');
     if (!confirmed) return;
 
     setClosing(true);
@@ -119,6 +120,7 @@ export default function CierreZPage() {
       }
       setData(result);
       setMontoInicial(String(result.montoInicial));
+      window.open(`/dashboard/cierre-z/${result.id}/print`, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -135,7 +137,7 @@ export default function CierreZPage() {
             <span>Cierre Z Diario</span>
           </h2>
           <p style={{ color: 'var(--text-muted)' }}>
-            El Cierre Z se emite manualmente y representa todo lo vendido en el día por este usuario.
+            El Cierre Z se emite manualmente como comprobante de cierre diario y bloquea nuevas ventas para esta jornada.
           </p>
         </div>
 
@@ -144,6 +146,11 @@ export default function CierreZPage() {
             <Printer size={16} />
             <span>Imprimir</span>
           </button>
+          {data?.cerrado && data?.id && (
+            <a href={`/dashboard/cierre-z/${data.id}/print`} target="_blank" rel="noreferrer" className="btn btn-secondary">
+              Ver Comprobante Z
+            </a>
+          )}
           <Link href="/dashboard/ventas" className="btn btn-primary">
             Volver a Caja
           </Link>
@@ -186,7 +193,7 @@ export default function CierreZPage() {
           </button>
           <button onClick={handleEmitirCierre} className="btn btn-primary" disabled={loading || closing || !!data?.cerrado}>
             <CheckCircle2 size={16} />
-            <span>{closing ? 'Emitiendo...' : 'Emitir Cierre Z'}</span>
+            <span>{closing ? 'Emitiendo...' : 'Emitir Comprobante Z'}</span>
           </button>
         </div>
       </div>

@@ -112,6 +112,7 @@ export async function GET(req: NextRequest) {
     const cierre = caja.cerradoAt && cierreGuardado ? cierreGuardado : calculated;
 
     return NextResponse.json({
+      id: caja.id,
       fecha: date,
       cerrado: !!caja.cerradoAt,
       cerradoAt: caja.cerradoAt,
@@ -200,6 +201,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      id: updated.id,
       fecha: businessDay.date,
       cerrado: true,
       cerradoAt: updated.cerradoAt,

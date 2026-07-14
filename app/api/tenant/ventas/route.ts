@@ -14,6 +14,13 @@ function getUserId(req: NextRequest): string | null {
   return req.headers.get('x-user-id');
 }
 
+function getBusinessDay(date = new Date()) {
+  const day = date.toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+  const start = new Date(`${day}T00:00:00-03:00`);
+  const end = new Date(`${day}T23:59:59.999-03:00`);
+  return { start, end };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
@@ -35,6 +42,26 @@ export async function POST(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
     const usuarioId = getUserId(req);
+
+    if (usuarioId) {
+      const { start } = getBusinessDay();
+      const cajaCerrada = await prisma.cajaDiaria.findUnique({
+        where: {
+          empresaId_usuarioId_fecha: {
+            empresaId,
+            usuarioId,
+            fecha: start,
+          },
+        },
+      });
+
+      if (cajaCerrada?.cerradoAt) {
+        return NextResponse.json(
+          { error: 'La caja de hoy ya tiene Cierre Z emitido. No se pueden registrar más ventas en esta jornada.' },
+          { status: 403 }
+        );
+      }
+    }
 
     // 1. Load company and subscription details to verify limits
     const empresa = await prisma.empresa.findUnique({

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    if (!usuario) {
+    if (!usuario || !usuario.activo) {
       return NextResponse.json(
         { error: 'Credenciales inválidas.' },
         { status: 401 }

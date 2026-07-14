@@ -3,12 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingCart, Package, Users, DollarSign, Settings, BarChart2, LogOut, ShieldAlert, ReceiptText, ClipboardCheck } from 'lucide-react';
+import { ShoppingCart, Package, Users, DollarSign, Settings, BarChart2, LogOut, ShieldAlert, ReceiptText, ClipboardCheck, KeyRound } from 'lucide-react';
 
 export default function SidebarTenant() {
   const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<any>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     async function fetchSession() {
@@ -28,6 +34,32 @@ export default function SidebarTenant() {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+    setChangingPassword(true);
+
+    try {
+      const res = await fetch('/api/tenant/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo cambiar la contraseña.');
+      }
+      setCurrentPassword('');
+      setNewPassword('');
+      setPasswordSuccess('Contraseña actualizada correctamente.');
+    } catch (err: any) {
+      setPasswordError(err.message);
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const navItems = [
@@ -77,6 +109,14 @@ export default function SidebarTenant() {
           )}
         </div>
         <button
+          onClick={() => setShowPasswordModal(true)}
+          className="btn btn-secondary btn-sm"
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}
+        >
+          <KeyRound size={14} />
+          <span>Cambiar Contraseña</span>
+        </button>
+        <button
           onClick={handleLogout}
           className="btn btn-secondary btn-sm"
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
@@ -85,6 +125,34 @@ export default function SidebarTenant() {
           <span>Cerrar Sesión</span>
         </button>
       </div>
+      {showPasswordModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Cambiar Contraseña</h3>
+              <button onClick={() => setShowPasswordModal(false)} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem' }}>X</button>
+            </div>
+            <form onSubmit={handleChangePassword}>
+              <div className="modal-body">
+                {passwordError && <div style={{ padding: '0.75rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: 'var(--radius-sm)', marginBottom: '1rem' }}>{passwordError}</div>}
+                {passwordSuccess && <div style={{ padding: '0.75rem', backgroundColor: '#dcfce7', color: '#15803d', borderRadius: 'var(--radius-sm)', marginBottom: '1rem' }}>{passwordSuccess}</div>}
+                <div className="form-group">
+                  <label className="form-label">Contraseña actual</label>
+                  <input type="password" className="form-input" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required disabled={changingPassword} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nueva contraseña</label>
+                  <input type="password" className="form-input" minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required disabled={changingPassword} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowPasswordModal(false)} className="btn btn-secondary" disabled={changingPassword}>Cerrar</button>
+                <button type="submit" className="btn btn-primary" disabled={changingPassword}>{changingPassword ? 'Guardando...' : 'Guardar'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
