@@ -105,6 +105,12 @@ export default function CierreZPage() {
     const confirmed = window.confirm('Vas a emitir el comprobante de Cierre Z del día. Una vez emitido, quedará guardado, se imprimirá y no se podrán registrar más ventas en esta jornada. ¿Continuar?');
     if (!confirmed) return;
 
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write('<p style="font-family: sans-serif; padding: 24px;">Generando comprobante de Cierre Z...</p>');
+      printWindow.document.close();
+    }
+
     setClosing(true);
     setError('');
 
@@ -120,8 +126,16 @@ export default function CierreZPage() {
       }
       setData(result);
       setMontoInicial(String(result.montoInicial));
-      window.open(`/dashboard/cierre-z/${result.id}/print`, '_blank', 'noopener,noreferrer');
+      const printUrl = `/dashboard/cierre-z/${result.id}/print`;
+      if (printWindow) {
+        printWindow.location.href = printUrl;
+      } else {
+        window.location.href = printUrl;
+      }
     } catch (err: any) {
+      if (printWindow) {
+        printWindow.close();
+      }
       setError(err.message);
     } finally {
       setClosing(false);
