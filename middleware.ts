@@ -52,13 +52,15 @@ export async function middleware(req: NextRequest) {
         pathname === '/dashboard' ||
         pathname.startsWith('/dashboard/ventas') ||
         pathname.startsWith('/dashboard/comprobantes') ||
-        pathname.startsWith('/dashboard/cierre-z');
+        pathname.startsWith('/dashboard/cierre-z') ||
+        pathname.startsWith('/dashboard/productos');
 
       const canAccessEmployeeApi =
         (pathname === '/api/tenant/ventas' && (req.method === 'GET' || req.method === 'POST')) ||
         (pathname.startsWith('/api/tenant/ventas/') && req.method === 'GET') ||
+        (pathname.endsWith('/nota-credito') && req.method === 'POST') ||
         (pathname === '/api/tenant/cierre-z' && (req.method === 'GET' || req.method === 'PUT' || req.method === 'POST')) ||
-        (pathname === '/api/tenant/productos' && req.method === 'GET') ||
+        (pathname === '/api/tenant/productos' && (req.method === 'GET' || req.method === 'POST' || req.method === 'PUT')) ||
         (pathname === '/api/tenant/clientes' && req.method === 'GET');
 
       if (pathname.startsWith('/dashboard') && !canAccessEmployeeDashboard) {

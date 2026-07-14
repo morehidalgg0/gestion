@@ -94,7 +94,7 @@ export default function ComprobantesPage() {
   };
 
   const canIssueCreditNote = (venta: Venta) => {
-    return session?.rol === 'OWNER' &&
+    return (session?.rol === 'OWNER' || session?.rol === 'EMPLOYEE') &&
       venta.estado !== 'RECHAZADO_AFIP' &&
       venta.tipoComprobante.startsWith('Factura') &&
       !hasCreditNote(venta);
