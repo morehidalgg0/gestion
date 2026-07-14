@@ -307,9 +307,9 @@ export default function CierreZPage() {
             <div className="card stat-card">
               <div className="stat-icon" style={{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }}>$</div>
               <div className="stat-info">
-                <span className="stat-label">Facturado del día</span>
+                <span className="stat-label">Total vendido del día</span>
                 <span className="stat-value">{formatMoney(data.facturadoTotal)}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Todo lo vendido en el día, neto de notas de crédito</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Suma de facturas emitidas, sin descontar notas de crédito</span>
               </div>
             </div>
 

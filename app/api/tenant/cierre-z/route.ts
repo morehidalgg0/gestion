@@ -19,6 +19,10 @@ function getUserId(req: NextRequest): string {
   return userId;
 }
 
+function getUserRole(req: NextRequest): string {
+  return req.headers.get('x-user-rol') || '';
+}
+
 function getBusinessDay(dateValue?: string) {
   const date = dateValue || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
   const start = new Date(`${date}T00:00:00-03:00`);
@@ -31,11 +35,15 @@ function signedTotal(tipoComprobante: string, total: unknown) {
   return tipoComprobante.startsWith('Nota de Crédito') ? -amount : amount;
 }
 
-async function calculateCierre(empresaId: string, usuarioId: string, start: Date, end: Date, montoInicial: number) {
+function saleTotal(tipoComprobante: string, total: unknown) {
+  return tipoComprobante.startsWith('Nota de Crédito') ? 0 : Number(total);
+}
+
+async function calculateCierre(empresaId: string, usuarioId: string | null, start: Date, end: Date, montoInicial: number) {
   const ventas = await prisma.venta.findMany({
     where: {
       empresaId,
-      usuarioId,
+      ...(usuarioId ? { usuarioId } : {}),
       fecha: {
         gte: start,
         lte: end,
@@ -55,7 +63,7 @@ async function calculateCierre(empresaId: string, usuarioId: string, start: Date
     return acc;
   }, {});
 
-  const facturadoTotal = ventas.reduce((acc, venta) => acc + signedTotal(venta.tipoComprobante, venta.total), 0);
+  const facturadoTotal = ventas.reduce((acc, venta) => acc + saleTotal(venta.tipoComprobante, venta.total), 0);
   const efectivoNeto = porFormaPago.Efectivo || 0;
 
   return {
@@ -127,16 +135,18 @@ export async function GET(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
     const usuarioId = getUserId(req);
+    const userRole = getUserRole(req);
     const { searchParams } = new URL(req.url);
     const { date, start, end } = getBusinessDay(searchParams.get('fecha') || undefined);
+    const cierreUsuarioId = userRole === 'OWNER' ? null : usuarioId;
 
     const caja = await getOrCreateCaja(empresaId, usuarioId, start);
     const montoInicial = Number(caja.montoInicial);
-    const calculated = await calculateCierre(empresaId, usuarioId, start, end, montoInicial);
+    const calculated = await calculateCierre(empresaId, cierreUsuarioId, start, end, montoInicial);
     const cierres = await prisma.cierreCaja.findMany({
       where: {
         empresaId,
-        usuarioId,
+        ...(cierreUsuarioId ? { usuarioId: cierreUsuarioId } : {}),
         fecha: start,
       },
       orderBy: { emitidoAt: 'desc' },
@@ -204,6 +214,7 @@ export async function POST(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
     const usuarioId = getUserId(req);
+    const userRole = getUserRole(req);
     const { fecha, tipo = 'Z' } = await req.json();
     const cierreTipo = String(tipo).toUpperCase();
 
@@ -212,6 +223,7 @@ export async function POST(req: NextRequest) {
     }
 
     const businessDay = getBusinessDay(fecha);
+    const cierreUsuarioId = userRole === 'OWNER' ? null : usuarioId;
     const caja = await getOrCreateCaja(empresaId, usuarioId, businessDay.start);
 
     if (cierreTipo === 'Z' && caja.cerradoAt) {
@@ -224,7 +236,7 @@ export async function POST(req: NextRequest) {
 
     const cierre = await calculateCierre(
       empresaId,
-      usuarioId,
+      cierreUsuarioId,
       businessDay.start,
       businessDay.end,
       Number(caja.montoInicial)
