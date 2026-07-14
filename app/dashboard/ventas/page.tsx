@@ -52,6 +52,18 @@ export default function PosPage() {
     }
   };
 
+  const getEffectiveUnitPrice = (product: any) => {
+    const price = parseFloat(product.precioVenta);
+    return product.unidad === 'g' ? price / 100 : price;
+  };
+
+  const getPriceLabel = (product: any) => {
+    const price = parseFloat(product.precioVenta).toLocaleString('es-AR');
+    if (product.unidad === 'g') return `$${price} / 100 g`;
+    if (product.unidad === 'kg') return `$${price} / kg`;
+    return `$${price} / unidad`;
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -85,10 +97,11 @@ export default function PosPage() {
           productoId: product.id,
           nombre: product.nombre,
           unidad: product.unidad,
-          precioUnitario: parseFloat(product.precioVenta),
+          precioUnitario: getEffectiveUnitPrice(product),
+          precioReferencia: parseFloat(product.precioVenta),
           ivaPorcentaje: parseFloat(product.ivaPorcentaje),
           cantidad: initialQty,
-          subtotal: initialQty * parseFloat(product.precioVenta),
+          subtotal: initialQty * getEffectiveUnitPrice(product),
         },
       ]);
     }
@@ -257,7 +270,7 @@ export default function PosPage() {
                   </div>
                   <div>
                     <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--primary)' }}>
-                      ${parseFloat(p.precioVenta).toLocaleString('es-AR')}
+                      {getPriceLabel(p)}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
                       Stock: {parseFloat(p.stockActual).toFixed(3).replace(/\.?0+$/, '')} {p.unidad}
@@ -305,14 +318,16 @@ export default function PosPage() {
                       {item.nombre}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      ${item.precioUnitario.toLocaleString('es-AR')} / {item.unidad}
+                      {item.unidad === 'g'
+                        ? `$${item.precioReferencia.toLocaleString('es-AR')} / 100 g`
+                        : `$${item.precioUnitario.toLocaleString('es-AR')} / ${item.unidad}`}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <input
                       type="number"
-                      step={item.unidad === 'g' ? '50' : '0.01'}
+                      step={item.unidad === 'g' || item.unidad === 'unidad' ? '1' : '0.001'}
                       className="form-input"
                       style={{ width: '80px', padding: '0.35rem 0.5rem', textAlign: 'center' }}
                       value={item.cantidad}
