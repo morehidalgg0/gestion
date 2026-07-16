@@ -8,6 +8,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
   const [venta, setVenta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [paperWidthMm, setPaperWidthMm] = useState(80);
 
   useEffect(() => {
     const fetchVenta = async () => {
@@ -46,7 +47,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
 
   // Determine letter box
   let letter = 'X';
-  let title = 'DOCUMENTO NO VÁLIDO COMO FACTURA';
+  let title = 'COMPROBANTE';
   let subtitle = 'COMPROBANTE CLASE "X"';
   
   if (venta.tipoComprobante === 'Factura A' || venta.tipoComprobante === 'Nota de Crédito A') {
@@ -76,6 +77,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
 
   const formattedDocNum = `${venta.puntoVenta.toString().padStart(4, '0')}-${venta.numeroComprobante.toString().padStart(8, '0')}`;
   const fechaHora = new Date(venta.createdAt);
+  const ticketWidthMm = Math.max(48, paperWidthMm - 8);
 
   return (
     <div className="print-page-root" style={{ background: '#f5f5f5', minHeight: '100vh', padding: '1.5rem 0' }}>
@@ -92,7 +94,22 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Vista de Impresión</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Vista de Impresión</span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <span>Ancho papel</span>
+            <select
+              className="form-select"
+              value={paperWidthMm}
+              onChange={(e) => setPaperWidthMm(Number(e.target.value))}
+              style={{ width: '92px', padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+            >
+              <option value={58}>58 mm</option>
+              <option value={76}>76 mm</option>
+              <option value={80}>80 mm</option>
+            </select>
+          </label>
+        </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={() => window.print()} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
             <Printer size={14} />
@@ -278,20 +295,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
               Comprobante autorizado por AFIP
             </div>
           </div>
-        ) : (
-          <div style={{
-            marginTop: '2rem',
-            padding: '0.5rem',
-            border: '1px dashed #000000',
-            fontSize: '0.7rem',
-            textAlign: 'center',
-            fontWeight: 'bold'
-          }}>
-            DOCUMENTO NO VÁLIDO COMO FACTURA
-            <br />
-            {venta.estado === 'DEMO' && 'COMPROBANTE DE SIMULACION INTERNA'}
-          </div>
-        )}
+        ) : null}
 
       </div>
 
@@ -299,7 +303,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
       <style jsx global>{`
         @media print {
           @page {
-            size: 80mm auto;
+            size: ${paperWidthMm}mm auto;
             margin: 0;
           }
           .no-print {
@@ -313,7 +317,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             background-color: #ffffff !important;
             padding: 0 !important;
             margin: 0 !important;
-            width: 72mm !important;
+            width: ${ticketWidthMm}mm !important;
             min-height: 0 !important;
             overflow: visible !important;
           }
@@ -335,12 +339,12 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             height: auto !important;
             padding: 0 !important;
             margin: 0 !important;
-            width: 72mm !important;
+            width: ${ticketWidthMm}mm !important;
           }
           .print-ticket {
             position: static !important;
-            max-width: 72mm !important;
-            width: 72mm !important;
+            max-width: ${ticketWidthMm}mm !important;
+            width: ${ticketWidthMm}mm !important;
             box-sizing: border-box !important;
             border: none !important;
             box-shadow: none !important;
