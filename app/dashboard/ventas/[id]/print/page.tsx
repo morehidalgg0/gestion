@@ -28,6 +28,16 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
     fetchVenta();
   }, [id]);
 
+  useEffect(() => {
+    if (!venta || loading || error) return;
+
+    const timeout = window.setTimeout(() => {
+      window.print();
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [venta, loading, error]);
+
   if (loading) {
     return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando comprobante...</div>;
   }
