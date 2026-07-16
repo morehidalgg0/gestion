@@ -378,6 +378,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           font-family: 'Courier New', monospace;
           font-size: 13px;
           line-height: 1.35;
+          font-weight: 700;
           box-sizing: border-box;
         }
         @media print {
@@ -436,6 +437,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             background: #fff !important;
             font-size: 12px !important;
             line-height: 1.3 !important;
+            font-weight: 700 !important;
             overflow: visible !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
@@ -443,6 +445,13 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           .thermal-ticket * {
             max-width: 100% !important;
             box-sizing: border-box !important;
+            font-weight: 700 !important;
+            color: #000000 !important;
+          }
+          .thermal-ticket strong,
+          .thermal-ticket [style*="900"],
+          .thermal-ticket [style*="800"] {
+            font-weight: 900 !important;
           }
         }
       `}</style>
