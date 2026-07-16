@@ -78,7 +78,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
   const fechaHora = new Date(venta.createdAt);
 
   return (
-    <div style={{ background: '#f5f5f5', minHeight: '100vh', padding: '1.5rem 0' }}>
+    <div className="print-page-root" style={{ background: '#f5f5f5', minHeight: '100vh', padding: '1.5rem 0' }}>
       
       {/* PRINT TOOLBAR (Hidden in Print) */}
       <div className="no-print" style={{
@@ -299,14 +299,8 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
       <style jsx global>{`
         @media print {
           @page {
-            margin: 8mm;
-          }
-          body * {
-            visibility: hidden !important;
-          }
-          .print-ticket,
-          .print-ticket * {
-            visibility: visible !important;
+            size: 80mm auto;
+            margin: 0;
           }
           .no-print {
             display: none !important;
@@ -319,6 +313,9 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             background-color: #ffffff !important;
             padding: 0 !important;
             margin: 0 !important;
+            width: 72mm !important;
+            min-height: 0 !important;
+            overflow: visible !important;
           }
           .main-layout,
           .content-area,
@@ -332,16 +329,31 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             margin: 0 !important;
             background: #ffffff !important;
           }
-          .print-ticket {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            max-width: 80mm !important;
-            width: 80mm !important;
-            border: none !important;
-            box-shadow: none !important;
+          .print-page-root {
+            background: #ffffff !important;
+            min-height: 0 !important;
+            height: auto !important;
             padding: 0 !important;
             margin: 0 !important;
+            width: 72mm !important;
+          }
+          .print-ticket {
+            position: static !important;
+            max-width: 72mm !important;
+            width: 72mm !important;
+            box-sizing: border-box !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 2mm !important;
+            margin: 0 !important;
+            font-size: 10px !important;
+            line-height: 1.2 !important;
+            overflow: visible !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          .print-ticket * {
+            max-width: 100% !important;
           }
         }
       `}</style>

@@ -122,7 +122,7 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
   const subtituloCierre = cierre.tipo === 'Z' ? 'COMPROBANTE DE CIERRE DIARIO DE CAJA' : 'COMPROBANTE DE CONTROL PARCIAL DE CAJA';
 
   return (
-    <div style={{ background: '#f5f5f5', minHeight: '100vh', padding: '1.5rem 0' }}>
+    <div className="print-page-root" style={{ background: '#f5f5f5', minHeight: '100vh', padding: '1.5rem 0' }}>
       <div className="no-print" style={{
         maxWidth: '680px',
         margin: '0 auto 1.5rem auto',
@@ -261,14 +261,13 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
 
       <style jsx global>{`
         @media print {
-          @page { margin: 8mm; }
-          body * { visibility: hidden !important; }
-          .print-ticket, .print-ticket * { visibility: visible !important; }
+          @page { margin: 0; }
           .no-print { display: none !important; }
           .sidebar, .navbar { display: none !important; }
-          body { background-color: #ffffff !important; padding: 0 !important; margin: 0 !important; }
+          body { background-color: #ffffff !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; overflow: visible !important; }
           .main-layout, .content-area, main, .container { display: block !important; width: 100% !important; max-width: none !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; background: #ffffff !important; }
-          .print-ticket { position: absolute !important; left: 0 !important; top: 0 !important; max-width: 100% !important; width: 100% !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+          .print-page-root { background: #ffffff !important; min-height: 0 !important; height: auto !important; padding: 0 !important; margin: 0 !important; }
+          .print-ticket { position: static !important; max-width: 100% !important; width: 100% !important; box-sizing: border-box !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; page-break-after: avoid !important; break-after: avoid !important; }
         }
       `}</style>
     </div>
