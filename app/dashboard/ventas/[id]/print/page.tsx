@@ -77,7 +77,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
 
   const formattedDocNum = `${venta.puntoVenta.toString().padStart(4, '0')}-${venta.numeroComprobante.toString().padStart(8, '0')}`;
   const fechaHora = new Date(venta.createdAt);
-  const ticketWidthMm = Math.max(48, paperWidthMm - 8);
+  const ticketWidthMm = Math.max(54, paperWidthMm - 4);
 
   return (
     <div className="print-page-root" style={{ background: '#f5f5f5', minHeight: '100vh', padding: '1.5rem 0' }}>
@@ -143,7 +143,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           marginBottom: '1.5rem'
         }}>
           {/* Centered Letter Code */}
-          <div style={{
+          <div className="invoice-letter-box" style={{
             position: 'absolute',
             top: '-1px',
             left: '50%',
@@ -164,7 +164,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             <span style={{ fontSize: '0.45rem', textTransform: 'uppercase' }}>cod. {code}</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
+          <div className="invoice-header-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
             {/* Left Col: Emisor Info */}
             <div style={{ fontSize: '0.75rem' }}>
               <div style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
@@ -176,7 +176,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             </div>
 
             {/* Right Col: Invoice Info */}
-            <div style={{ fontSize: '0.75rem', textAlign: 'right' }}>
+            <div className="invoice-info" style={{ fontSize: '0.75rem', textAlign: 'right' }}>
               <div style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
                 {title}
               </div>
@@ -207,14 +207,14 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
         {/* ITEMS LIST */}
         <div style={{ minHeight: '120px', fontSize: '0.8rem' }}>
           {/* Header */}
-          <div style={{
+          <div className="receipt-items-header" style={{
             display: 'flex',
             fontWeight: 'bold',
             borderBottom: '1px solid #000000',
             paddingBottom: '0.25rem',
             marginBottom: '0.5rem'
           }}>
-            <div style={{ flex: '2' }}>Descripción</div>
+            <div className="receipt-item-desc" style={{ flex: '2' }}>Descripción</div>
             <div style={{ flex: '1', textAlign: 'right' }}>Cant.</div>
             <div style={{ flex: '1', textAlign: 'right' }}>P.Unit</div>
             <div style={{ flex: '1', textAlign: 'right' }}>Total</div>
@@ -222,8 +222,8 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
 
           {/* Table Items */}
           {items.map((item: any) => (
-            <div key={item.id} style={{ display: 'flex', marginBottom: '0.4rem' }}>
-              <div style={{ flex: '2', wordBreak: 'break-word' }}>{item.productoName}</div>
+            <div key={item.id} className="receipt-item-row" style={{ display: 'flex', marginBottom: '0.4rem' }}>
+              <div className="receipt-item-desc" style={{ flex: '2', wordBreak: 'break-word' }}>{item.productoName}</div>
               <div style={{ flex: '1', textAlign: 'right' }}>
                 {parseFloat(item.cantidad).toFixed(item.productoName.toLowerCase().includes('peso') || item.productoName.toLowerCase().includes('kg') ? 3 : 2)}
               </div>
@@ -348,9 +348,9 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             box-sizing: border-box !important;
             border: none !important;
             box-shadow: none !important;
-            padding: 2mm !important;
+            padding: 1.5mm !important;
             margin: 0 !important;
-            font-size: 10px !important;
+            font-size: 9px !important;
             line-height: 1.2 !important;
             overflow: visible !important;
             page-break-after: avoid !important;
@@ -358,6 +358,35 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           }
           .print-ticket * {
             max-width: 100% !important;
+          }
+          .invoice-letter-box {
+            position: static !important;
+            transform: none !important;
+            margin: 0 auto 2mm auto !important;
+            width: 10mm !important;
+            height: 10mm !important;
+            font-size: 16px !important;
+          }
+          .invoice-header-grid {
+            grid-template-columns: 1fr !important;
+            gap: 2mm !important;
+            margin-top: 0 !important;
+          }
+          .invoice-info {
+            text-align: left !important;
+          }
+          .receipt-items-header,
+          .receipt-item-row {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) 8mm 12mm 13mm !important;
+            gap: 1mm !important;
+            align-items: start !important;
+          }
+          .receipt-item-desc {
+            min-width: 0 !important;
+            word-break: normal !important;
+            overflow-wrap: anywhere !important;
+            hyphens: none !important;
           }
         }
       `}</style>
