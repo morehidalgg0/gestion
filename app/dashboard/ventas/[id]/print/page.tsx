@@ -300,23 +300,23 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
       </div>
 
       <div className="thermal-ticket">
-        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '12px', marginBottom: '2mm' }}>
+        <div style={{ textAlign: 'center', fontWeight: 800, fontSize: '15px', marginBottom: '2mm' }}>
           {config?.razonSocial || empresa?.nombre || 'Comercio'}
         </div>
-        <div style={{ textAlign: 'center', fontSize: '10px', marginBottom: '2mm' }}>
+        <div style={{ textAlign: 'center', fontSize: '12px', marginBottom: '2mm' }}>
           CUIT: {config?.cuit || empresa?.cuit || '-'}
           <br />
           IVA: {config?.condicionIva || empresa?.condicionIva || '-'}
         </div>
 
         <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '2mm 0', marginBottom: '2mm', textAlign: 'center' }}>
-          <div style={{ fontWeight: 800, fontSize: '13px' }}>{title}</div>
+          <div style={{ fontWeight: 800, fontSize: '15px' }}>{title}</div>
           <div>Clase {letter} - Cod. {code}</div>
           <div>Nro: {formattedDocNum}</div>
           <div>{fechaHora.toLocaleDateString('es-AR')} {fechaHora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
 
-        <div style={{ fontSize: '10px', marginBottom: '2mm' }}>
+        <div style={{ fontSize: '12px', marginBottom: '2mm' }}>
           <strong>Cliente:</strong> {cliente.razonSocial}
           <br />
           {cliente.tipoDoc}: {cliente.nroDoc}
@@ -349,7 +349,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
               </div>
             </>
           )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '14px', marginTop: '1mm' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '17px', marginTop: '1mm' }}>
             <span>TOTAL</span>
             <span>${Number(venta.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
           </div>
@@ -357,7 +357,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
         </div>
 
         {isFiscal && (
-          <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm', marginTop: '2mm', fontSize: '9px' }}>
+          <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm', marginTop: '2mm', fontSize: '11px' }}>
             CAE: {venta.cae}
             <br />
             Vto CAE: {new Date(venta.caeVencimiento).toLocaleDateString('es-AR')}
@@ -376,8 +376,8 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           background: #ffffff;
           color: #000000;
           font-family: 'Courier New', monospace;
-          font-size: 11px;
-          line-height: 1.25;
+          font-size: 13px;
+          line-height: 1.35;
           box-sizing: border-box;
         }
         @media print {
@@ -434,8 +434,8 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             font-family: 'Courier New', monospace !important;
             color: #000 !important;
             background: #fff !important;
-            font-size: 10px !important;
-            line-height: 1.2 !important;
+            font-size: 12px !important;
+            line-height: 1.3 !important;
             overflow: visible !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
