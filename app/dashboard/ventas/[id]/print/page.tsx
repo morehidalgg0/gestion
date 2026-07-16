@@ -133,7 +133,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
         fontFamily: 'Courier New, monospace',
         color: '#000000',
         lineHeight: '1.3'
-      }} className="print-ticket">
+      }} className="print-ticket no-print">
         
         {/* Argentina Standard Invoice Header Box */}
         <div style={{
@@ -299,8 +299,87 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
 
       </div>
 
+      <div className="thermal-ticket">
+        <div style={{ textAlign: 'center', fontWeight: 700, fontSize: '12px', marginBottom: '2mm' }}>
+          {config?.razonSocial || empresa?.nombre || 'Comercio'}
+        </div>
+        <div style={{ textAlign: 'center', fontSize: '10px', marginBottom: '2mm' }}>
+          CUIT: {config?.cuit || empresa?.cuit || '-'}
+          <br />
+          IVA: {config?.condicionIva || empresa?.condicionIva || '-'}
+        </div>
+
+        <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '2mm 0', marginBottom: '2mm', textAlign: 'center' }}>
+          <div style={{ fontWeight: 800, fontSize: '13px' }}>{title}</div>
+          <div>Clase {letter} - Cod. {code}</div>
+          <div>Nro: {formattedDocNum}</div>
+          <div>{fechaHora.toLocaleDateString('es-AR')} {fechaHora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+
+        <div style={{ fontSize: '10px', marginBottom: '2mm' }}>
+          <strong>Cliente:</strong> {cliente.razonSocial}
+          <br />
+          {cliente.tipoDoc}: {cliente.nroDoc}
+          <br />
+          IVA: {cliente.condicionIva}
+        </div>
+
+        <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm' }}>
+          {items.map((item: any) => (
+            <div key={item.id} style={{ marginBottom: '2mm', breakInside: 'avoid' }}>
+              <div style={{ fontWeight: 700, overflowWrap: 'break-word' }}>{item.productoName}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2mm' }}>
+                <span>{Number(item.cantidad).toLocaleString('es-AR')} x ${Number(item.precioUnitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                <strong>${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm', marginTop: '2mm' }}>
+          {letter === 'A' && (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Neto</span>
+                <span>${Number(venta.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>IVA</span>
+                <span>${Number(venta.iva).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '14px', marginTop: '1mm' }}>
+            <span>TOTAL</span>
+            <span>${Number(venta.total).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+          </div>
+          <div style={{ marginTop: '2mm' }}>Pago: {venta.formaPago}</div>
+        </div>
+
+        {isFiscal && (
+          <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm', marginTop: '2mm', fontSize: '9px' }}>
+            CAE: {venta.cae}
+            <br />
+            Vto CAE: {new Date(venta.caeVencimiento).toLocaleDateString('es-AR')}
+          </div>
+        )}
+      </div>
+
       {/* Global CSS overrides for printing */}
       <style jsx global>{`
+        .thermal-ticket {
+          display: block;
+          max-width: ${ticketWidthMm}mm;
+          width: ${ticketWidthMm}mm;
+          margin: 0 auto;
+          padding: 2mm;
+          background: #ffffff;
+          color: #000000;
+          font-family: 'Courier New', monospace;
+          font-size: 11px;
+          line-height: 1.25;
+          box-sizing: border-box;
+        }
         @media print {
           @page {
             size: ${paperWidthMm}mm auto;
@@ -342,51 +421,28 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             width: ${ticketWidthMm}mm !important;
           }
           .print-ticket {
+            display: none !important;
+          }
+          .thermal-ticket {
+            display: block !important;
             position: static !important;
             max-width: ${ticketWidthMm}mm !important;
             width: ${ticketWidthMm}mm !important;
             box-sizing: border-box !important;
-            border: none !important;
-            box-shadow: none !important;
             padding: 1.5mm !important;
             margin: 0 !important;
-            font-size: 9px !important;
+            font-family: 'Courier New', monospace !important;
+            color: #000 !important;
+            background: #fff !important;
+            font-size: 10px !important;
             line-height: 1.2 !important;
             overflow: visible !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
           }
-          .print-ticket * {
+          .thermal-ticket * {
             max-width: 100% !important;
-          }
-          .invoice-letter-box {
-            position: static !important;
-            transform: none !important;
-            margin: 0 auto 2mm auto !important;
-            width: 10mm !important;
-            height: 10mm !important;
-            font-size: 16px !important;
-          }
-          .invoice-header-grid {
-            grid-template-columns: 1fr !important;
-            gap: 2mm !important;
-            margin-top: 0 !important;
-          }
-          .invoice-info {
-            text-align: left !important;
-          }
-          .receipt-items-header,
-          .receipt-item-row {
-            display: grid !important;
-            grid-template-columns: minmax(0, 1fr) 8mm 12mm 13mm !important;
-            gap: 1mm !important;
-            align-items: start !important;
-          }
-          .receipt-item-desc {
-            min-width: 0 !important;
-            word-break: normal !important;
-            overflow-wrap: anywhere !important;
-            hyphens: none !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>
