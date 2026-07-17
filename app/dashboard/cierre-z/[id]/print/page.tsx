@@ -75,6 +75,7 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
   const [cierre, setCierre] = useState<CierreZ | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [paperWidthMm, setPaperWidthMm] = useState(80);
 
   useEffect(() => {
     async function loadCierre() {
@@ -94,6 +95,16 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
 
     loadCierre();
   }, [id]);
+
+  useEffect(() => {
+    if (!cierre || loading || error) return;
+
+    const timeout = window.setTimeout(() => {
+      window.print();
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [cierre, loading, error]);
 
   if (loading) {
     return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando comprobante de cierre...</div>;
@@ -120,6 +131,7 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
   const egresosTotal = cierre.egresosTotal ?? (cierre.detalle as any)?.egresosTotal ?? 0;
   const tituloCierre = `CIERRE ${cierre.tipo}`;
   const subtituloCierre = cierre.tipo === 'Z' ? 'COMPROBANTE DE CIERRE DIARIO DE CAJA' : 'COMPROBANTE DE CONTROL PARCIAL DE CAJA';
+  const ticketWidthMm = Math.max(54, paperWidthMm - 4);
 
   return (
     <div className="print-page-root" style={{ background: '#f5f5f5', minHeight: '100vh', padding: '1.5rem 0' }}>
@@ -134,7 +146,22 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Comprobante de {tituloCierre}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Comprobante de {tituloCierre}</span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <span>Ancho papel</span>
+            <select
+              className="form-select"
+              value={paperWidthMm}
+              onChange={(e) => setPaperWidthMm(Number(e.target.value))}
+              style={{ width: '92px', padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+            >
+              <option value={58}>58 mm</option>
+              <option value={76}>76 mm</option>
+              <option value={80}>80 mm</option>
+            </select>
+          </label>
+        </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button onClick={() => window.print()} className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
             <Printer size={14} />
@@ -147,7 +174,7 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      <div className="print-ticket" style={{
+      <div className="print-ticket no-print" style={{
         maxWidth: '640px',
         margin: '0 auto',
         padding: '2rem',
@@ -259,15 +286,94 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
+      <div className="thermal-ticket">
+        <div style={{ textAlign: 'center', fontSize: '15px', fontWeight: 900, marginBottom: '2mm' }}>{tituloCierre}</div>
+        <div style={{ textAlign: 'center', fontSize: '12px', marginBottom: '2mm' }}>{subtituloCierre}</div>
+        <div style={{ textAlign: 'center', borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '2mm 0', marginBottom: '2mm' }}>
+          <div>{razonSocial}</div>
+          <div>CUIT: {cuit}</div>
+          <div>IVA: {condicionIva}</div>
+          <div>P.V.: {puntoVenta.toString().padStart(4, '0')}</div>
+        </div>
+
+        <div style={{ marginBottom: '2mm' }}>
+          <div>Fecha fiscal: {new Date(cierre.fecha).toLocaleDateString('es-AR')}</div>
+          <div>Emitido: {new Date(cierre.emitidoAt).toLocaleString('es-AR')}</div>
+          <div>Cajero: {cierre.usuario?.nombre || '-'}</div>
+        </div>
+
+        <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm', marginBottom: '2mm' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Comprobantes</span><strong>{cierre.cantidadComprobantes}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total vendido</span><strong>{formatMoney(cierre.facturadoTotal)}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Fondo inicial</span><strong>{formatMoney(cierre.montoInicial)}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Efectivo neto</span><strong>{formatMoney(cierre.efectivoNeto)}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Egresos efectivo</span><strong>-{formatMoney(egresosEfectivo)}</strong></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #000', marginTop: '1mm', paddingTop: '1mm', fontSize: '15px', fontWeight: 900 }}>
+            <span>TOTAL CAJA</span><span>{formatMoney(cierre.totalCaja)}</span>
+          </div>
+        </div>
+
+        <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm', marginBottom: '2mm' }}>
+          <div style={{ textAlign: 'center', fontWeight: 900, marginBottom: '1mm' }}>FORMAS DE PAGO</div>
+          {Object.entries(porFormaPago).map(([formaPago, total]) => (
+            <div key={formaPago} style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{formaPago}</span><strong>{formatMoney(Number(total))}</strong>
+            </div>
+          ))}
+          {Object.keys(porFormaPago).length === 0 && <div>Sin movimientos.</div>}
+        </div>
+
+        <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm', marginBottom: '2mm' }}>
+          <div style={{ textAlign: 'center', fontWeight: 900, marginBottom: '1mm' }}>EGRESOS</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total egresos</span><strong>{formatMoney(egresosTotal)}</strong></div>
+          {egresos.map((egreso) => (
+            <div key={egreso.id} style={{ marginTop: '1mm' }}>
+              <div>{egreso.proveedor} - {egreso.concepto}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{egreso.formaPago}</span><strong>-{formatMoney(egreso.monto)}</strong></div>
+            </div>
+          ))}
+          {egresos.length === 0 && <div>Sin egresos.</div>}
+        </div>
+
+        <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm' }}>
+          <div style={{ textAlign: 'center', fontWeight: 900, marginBottom: '1mm' }}>COMPROBANTES</div>
+          {ventas.map((venta) => (
+            <div key={venta.id} style={{ marginBottom: '1mm' }}>
+              <div>{venta.tipoComprobante} {formatVoucherNumber(venta)}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{venta.formaPago}</span><strong>{formatMoney(venta.signedTotal)}</strong></div>
+            </div>
+          ))}
+          {ventas.length === 0 && <div>Sin comprobantes.</div>}
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '3mm', fontWeight: 900 }}>FIN {tituloCierre}</div>
+      </div>
+
       <style jsx global>{`
+        .thermal-ticket {
+          display: block;
+          max-width: ${ticketWidthMm}mm;
+          width: ${ticketWidthMm}mm;
+          margin: 0 auto;
+          padding: 2mm;
+          background: #ffffff;
+          color: #000000;
+          font-family: 'Courier New', monospace;
+          font-size: 13px;
+          line-height: 1.35;
+          font-weight: 700;
+          box-sizing: border-box;
+        }
         @media print {
-          @page { margin: 0; }
+          @page { size: ${paperWidthMm}mm auto; margin: 0; }
           .no-print { display: none !important; }
           .sidebar, .navbar { display: none !important; }
           body { background-color: #ffffff !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; overflow: visible !important; }
           .main-layout, .content-area, main, .container { display: block !important; width: 100% !important; max-width: none !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; background: #ffffff !important; }
-          .print-page-root { background: #ffffff !important; min-height: 0 !important; height: auto !important; padding: 0 !important; margin: 0 !important; }
-          .print-ticket { position: static !important; max-width: 100% !important; width: 100% !important; box-sizing: border-box !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; page-break-after: avoid !important; break-after: avoid !important; }
+          .print-page-root { background: #ffffff !important; min-height: 0 !important; height: auto !important; padding: 0 !important; margin: 0 !important; width: ${ticketWidthMm}mm !important; }
+          .thermal-ticket { display: block !important; position: static !important; max-width: ${ticketWidthMm}mm !important; width: ${ticketWidthMm}mm !important; box-sizing: border-box !important; padding: 1.5mm !important; margin: 0 !important; font-size: 12px !important; line-height: 1.3 !important; font-weight: 700 !important; page-break-after: avoid !important; break-after: avoid !important; }
+          .thermal-ticket * { max-width: 100% !important; box-sizing: border-box !important; font-weight: 700 !important; color: #000000 !important; }
+          .thermal-ticket strong, .thermal-ticket [style*="900"], .thermal-ticket [style*="800"] { font-weight: 900 !important; }
         }
       `}</style>
     </div>
