@@ -106,7 +106,7 @@ export default function CheckoutPage() {
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <h1 style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>Elegí tu Plan de Suscripción</h1>
             <p style={{ fontSize: '1.1rem', color: 'var(--text-muted)' }}>
-              Para activar tu cuenta y acceder a las herramientas de venta y facturación, por favor suscribite a uno de nuestros planes comerciales.
+              Activá tu cuenta con la prueba de 7 días o el plan mensual. Las restricciones se definirán más adelante.
             </p>
           </div>
 
@@ -129,7 +129,7 @@ export default function CheckoutPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '2rem' }}>
             {plans.map((plan: any) => {
               const isFree = parseFloat(plan.precioMensual) === 0;
-              const isBasic = plan.nombre === 'Básico';
+              const isMonthly = plan.nombre === 'Mensual';
 
               return (
                 <div
@@ -139,22 +139,22 @@ export default function CheckoutPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     padding: '2rem',
-                    border: isBasic ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                    border: isMonthly ? '2px solid var(--primary)' : '1px solid var(--border-color)',
                     position: 'relative'
                   }}
                 >
-                  {isBasic && (
+                  {isMonthly && (
                     <span className="badge badge-success" style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
                       Recomendado
                     </span>
                   )}
-                  <h3 style={{ fontSize: '1.35rem', marginBottom: '0.5rem' }}>Plan {plan.nombre}</h3>
+                  <h3 style={{ fontSize: '1.35rem', marginBottom: '0.5rem' }}>{isFree ? 'Versión de prueba' : 'Plan mensual'}</h3>
                   <div style={{ margin: '1rem 0' }}>
                     <span style={{ fontSize: '2rem', fontWeight: 700 }}>
                       ${parseFloat(plan.precioMensual).toLocaleString('es-AR')}
                     </span>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                      {isFree ? ' / 14 días gratis' : ' / mes'}
+                      {isFree ? ' / 7 días' : ' / mes'}
                     </span>
                   </div>
                   
@@ -167,30 +167,14 @@ export default function CheckoutPage() {
                     gap: '0.6rem',
                     fontSize: '0.95rem'
                   }}>
-                    <li>
-                      ✔️ {plan.limiteVentasMensuales > 0 ? (
-                        <><strong>{plan.limiteVentasMensuales} ventas</strong> al mes</>
-                      ) : (
-                        <strong>Ventas ilimitadas</strong>
-                      )}
-                    </li>
-                    <li>
-                      ✔️ Hasta <strong>{plan.limiteUsuarios} usuarios</strong> de personal
-                    </li>
-                    <li>
-                      ✔️ Facturación Electrónica AFIP
-                    </li>
-                    <li>
-                      ✔️ Cuentas corrientes (fiado)
-                    </li>
-                    <li>
-                      ✔️ Control de stock y alertas
-                    </li>
+                    <li>✔️ {isFree ? 'Acceso de prueba por 7 días' : 'Acceso mensual a ComercioPro'}</li>
+                    <li>✔️ Punto de venta, stock, caja y comprobantes</li>
+                    <li>✔️ Las restricciones se definirán más adelante</li>
                   </ul>
 
                   <button
                     onClick={() => handleSelectPlan(plan.id)}
-                    className={`btn ${isBasic ? 'btn-primary' : 'btn-secondary'}`}
+                    className={`btn ${isMonthly ? 'btn-primary' : 'btn-secondary'}`}
                     style={{ marginTop: 'auto', width: '100%' }}
                     disabled={submitting}
                   >

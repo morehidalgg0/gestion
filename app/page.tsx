@@ -107,70 +107,46 @@ export default function LandingPage() {
       {/* Pricing Section */}
       <section id="planes" style={{ padding: '5rem 2rem', backgroundColor: 'var(--bg-primary)' }}>
         <div className="container" style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '2.25rem', marginBottom: '1rem' }}>Planes simples adaptados a tu escala</h2>
+          <h2 style={{ fontSize: '2.25rem', marginBottom: '1rem' }}>Planes simples</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '3rem', fontSize: '1.1rem' }}>
-            Todos los planes incluyen facturación AFIP, control de stock y cuentas corrientes.
+            Empezá con una prueba de 7 días o activá el plan mensual. Las restricciones se definirán más adelante.
           </p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', maxWidth: '1000px', margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', maxWidth: '760px', margin: '0 auto' }}>
             {/* Plan Prueba */}
             <div className="card" style={{ display: 'flex', flexDirection: 'column', padding: '2.5rem', border: '1px solid var(--border-color)' }}>
-              <h3 style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>Prueba Gratis</h3>
+              <h3 style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>Versión de prueba</h3>
               <div style={{ margin: '1.5rem 0' }}>
                 <span style={{ fontSize: '2.5rem', fontWeight: 700 }}>$0</span>
-                <span style={{ color: 'var(--text-muted)' }}> / 14 días</span>
+                <span style={{ color: 'var(--text-muted)' }}> / 7 días</span>
               </div>
               <ul style={{ textAlign: 'left', listStyle: 'none', padding: 0, marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li>✔️ <strong>50 ventas</strong> mensuales max</li>
-                <li>✔️ Hasta <strong>2 usuarios</strong> (empleados)</li>
-                <li>✔️ Módulo de stock y alerta mínimo</li>
-                <li>✔️ Cuenta corriente e historial</li>
-                <li>✔️ Soporte de tickets de acceso demo</li>
+                <li>✔️ Acceso de prueba por <strong>7 días</strong></li>
+                <li>✔️ Probá punto de venta, stock y comprobantes</li>
+                <li>✔️ Las restricciones se definirán más adelante</li>
               </ul>
               <Link href="/registro" className="btn btn-secondary" style={{ marginTop: 'auto', width: '100%' }}>
-                Iniciar Demo
+                Iniciar prueba
               </Link>
             </div>
 
-            {/* Plan Básico */}
+            {/* Plan Mensual */}
             <div className="card" style={{ display: 'flex', flexDirection: 'column', padding: '2.5rem', border: '2px solid var(--primary)', position: 'relative' }}>
               <span className="badge badge-success" style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
                 Recomendado
               </span>
-              <h3 style={{ fontSize: '1.5rem', color: 'var(--primary)' }}>Básico</h3>
+              <h3 style={{ fontSize: '1.5rem', color: 'var(--primary)' }}>Plan mensual</h3>
               <div style={{ margin: '1.5rem 0' }}>
-                <span style={{ fontSize: '2.5rem', fontWeight: 700 }}>$15.000</span>
+                <span style={{ fontSize: '2.5rem', fontWeight: 700 }}>$35.000</span>
                 <span style={{ color: 'var(--text-muted)' }}> / mes</span>
               </div>
               <ul style={{ textAlign: 'left', listStyle: 'none', padding: 0, marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li>✔️ <strong>500 ventas</strong> mensuales max</li>
-                <li>✔️ Hasta <strong>3 usuarios</strong></li>
-                <li>✔️ Factura Electrónica Real (AFIP)</li>
-                <li>✔️ Ajustes de stock y alertas</li>
-                <li>✔️ Cuentas corrientes e historial</li>
+                <li>✔️ Acceso mensual a ComercioPro</li>
+                <li>✔️ Punto de venta, stock, caja y comprobantes</li>
+                <li>✔️ Las restricciones se definirán más adelante</li>
               </ul>
               <Link href="/registro" className="btn btn-primary" style={{ marginTop: 'auto', width: '100%' }}>
                 Suscribirme
-              </Link>
-            </div>
-
-            {/* Plan Premium */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', padding: '2.5rem', border: '1px solid var(--border-color)' }}>
-              <h3 style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>Premium</h3>
-              <div style={{ margin: '1.5rem 0' }}>
-                <span style={{ fontSize: '2.5rem', fontWeight: 700 }}>$30.000</span>
-                <span style={{ color: 'var(--text-muted)' }}> / mes</span>
-              </div>
-              <ul style={{ textAlign: 'left', listStyle: 'none', padding: 0, marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li>✔️ <strong>Ventas ilimitadas</strong></li>
-                <li>✔️ <strong>Usuarios ilimitados</strong></li>
-                <li>✔️ Factura Electrónica Real (AFIP)</li>
-                <li>✔️ Soporte multi-punto de venta</li>
-                <li>✔️ Reportes financieros avanzados</li>
-                <li>✔️ Soporte prioritario 24/7</li>
-              </ul>
-              <Link href="/registro" className="btn btn-accent" style={{ marginTop: 'auto', width: '100%' }}>
-                Comprar Premium
               </Link>
             </div>
           </div>
