@@ -153,9 +153,10 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
 
   // 3. REAL AFIP WSFEv1 CONNECTION
   try {
-    // Decrypt credentials
-    const cert = decrypt(req.certificadoEncriptado, req.iv);
-    const key = decrypt(req.claveEncriptada, req.iv);
+    // Decrypt credentials. The config stores one IV per encrypted file as "certIv:keyIv".
+    const [certIv, keyIv] = req.iv.includes(':') ? req.iv.split(':') : [req.iv, req.iv];
+    const cert = decrypt(req.certificadoEncriptado, certIv);
+    const key = decrypt(req.claveEncriptada, keyIv);
 
     // Initialize AFIP client with cross-platform temp directory for XML token caching
     const afip = new Afip({
