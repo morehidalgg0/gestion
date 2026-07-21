@@ -421,10 +421,11 @@ export default function CierreZPrintPage({ params }: { params: Promise<{ id: str
           @page { size: ${paperWidthMm}mm auto; margin: 0; }
           .no-print { display: none !important; }
           .sidebar, .navbar { display: none !important; }
-          body { background-color: #ffffff !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; overflow: visible !important; }
+          html, body { background-color: #ffffff !important; padding: 0 !important; margin: 0 !important; width: ${ticketWidthMm}mm !important; min-width: ${ticketWidthMm}mm !important; min-height: 0 !important; height: auto !important; overflow: visible !important; }
+          body > div { width: ${ticketWidthMm}mm !important; min-height: 0 !important; height: auto !important; padding: 0 !important; margin: 0 !important; }
           .main-layout, .content-area, main, .container { display: block !important; width: 100% !important; max-width: none !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; background: #ffffff !important; }
-          .print-page-root { background: #ffffff !important; min-height: 0 !important; height: auto !important; padding: 0 !important; margin: 0 !important; width: ${ticketWidthMm}mm !important; }
-          .thermal-ticket { display: block !important; position: static !important; max-width: ${ticketWidthMm}mm !important; width: ${ticketWidthMm}mm !important; box-sizing: border-box !important; padding: 1.5mm !important; margin: 0 !important; font-size: 12px !important; line-height: 1.3 !important; font-weight: 700 !important; page-break-after: avoid !important; break-after: avoid !important; }
+          .print-page-root { display: block !important; background: #ffffff !important; min-height: 0 !important; height: auto !important; padding: 0 !important; margin: 0 !important; width: ${ticketWidthMm}mm !important; overflow: visible !important; }
+          .thermal-ticket { display: block !important; position: static !important; max-width: ${ticketWidthMm}mm !important; width: ${ticketWidthMm}mm !important; box-sizing: border-box !important; padding: 1.5mm 1.5mm 0 1.5mm !important; margin: 0 !important; font-size: 12px !important; line-height: 1.3 !important; font-weight: 700 !important; overflow: hidden !important; page-break-after: avoid !important; break-after: avoid !important; }
           .thermal-ticket * { max-width: 100% !important; box-sizing: border-box !important; font-weight: 700 !important; color: #000000 !important; }
           .thermal-ticket strong, .thermal-ticket [style*="900"], .thermal-ticket [style*="800"] { font-weight: 900 !important; }
           .thermal-row, .thermal-total { display: grid !important; grid-template-columns: minmax(0, 1fr) auto !important; gap: 2mm !important; }
