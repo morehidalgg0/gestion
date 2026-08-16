@@ -402,20 +402,21 @@ export async function createVoucher(
   const response = xmlUnescape(await postSoap(url, body, `"${WSFE_NS}FECAESolicitar"`));
 
   const fault = extractFault(response);
-  if (fault) {
+  if (fault && !response.includes('<Resultado>')) {
     throw new Error(`AFIP: ${fault}`);
   }
 
   const resultado = response.match(/<Resultado>([A-Z])<\/Resultado>/)?.[1];
   const errMsgs = Array.from(response.matchAll(/<Msg>([\s\S]*?)<\/Msg>/g)).map((m) => m[1].trim());
-  if (resultado === 'R' || (errMsgs.length > 0 && !response.includes('<CAE>'))) {
+  if (resultado === 'R') {
     throw new Error(errMsgs.length > 0 ? errMsgs.join(' - ') : 'AFIP rechazó el comprobante');
   }
 
   const cae = response.match(/<CAE>(\d+)<\/CAE>/)?.[1];
   const vto = response.match(/<CAEFchVto>(\d+)<\/CAEFchVto>/)?.[1];
   if (!cae || !vto) {
-    throw new Error('AFIP no devolvió un CAE válido');
+    const info = errMsgs.filter(m => !m.startsWith('IMPORTANTE')).join(' - ');
+    throw new Error(info || 'AFIP no devolvió un CAE válido');
   }
 
   return { CAE: cae, CAEFchVto: vto };
