@@ -60,6 +60,7 @@ export async function middleware(req: NextRequest) {
         (pathname === '/api/tenant/ventas' && (req.method === 'GET' || req.method === 'POST')) ||
         (pathname.startsWith('/api/tenant/ventas/') && req.method === 'GET') ||
         (pathname.endsWith('/nota-credito') && req.method === 'POST') ||
+        (pathname.endsWith('/factura') && req.method === 'POST') ||
         (pathname === '/api/tenant/cierre-z' && (req.method === 'GET' || req.method === 'PUT' || req.method === 'POST')) ||
         (pathname.startsWith('/api/tenant/cierre-z/') && req.method === 'GET') ||
         (pathname === '/api/tenant/egresos' && (req.method === 'GET' || req.method === 'POST')) ||

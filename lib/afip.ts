@@ -252,10 +252,20 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
     };
   } catch (error: any) {
     console.error('AFIP invoice authorization failed:', error);
+    const status = error?.response?.status || error?.status;
+    let mensaje = error.message || 'Error desconocido al conectar con AFIP';
+    if (status === 401) {
+      mensaje =
+        'AFIP rechazó la autenticación (HTTP 401). Verificá que: 1) el certificado .crt y la clave .key correspondan al CUIT configurado, 2) el certificado esté vigente (no vencido), y 3) hayas autorizado el servicio "Facturación Electrónica - wsfe" para este certificado en el Administrador de Relaciones de AFIP (entorno de ' +
+        (req.modo === 'produccion' ? 'producción' : 'homologación') +
+        ').';
+    } else if (status === 500 || status === 502) {
+      mensaje = 'AFIP devolvió un error interno del servidor (HTTP ' + status + '). Reintentá en unos minutos.';
+    }
     return {
       estado: 'RECHAZADO_AFIP',
       numeroComprobante: 0,
-      mensajeAfip: error.message || 'Error desconocido al conectar con AFIP',
+      mensajeAfip: mensaje,
     };
   }
 }

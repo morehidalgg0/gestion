@@ -305,6 +305,17 @@ export async function POST(req: NextRequest) {
 
     // 8. Handle Rejection from AFIP
     if (afipResult.estado === 'RECHAZADO_AFIP') {
+      // Reemplazar el rechazo anterior del mismo comprobante para no violar la unicidad (N° 0)
+      await prisma.venta.deleteMany({
+        where: {
+          empresaId,
+          tipoComprobante,
+          puntoVenta: configAfip.puntoVenta,
+          numeroComprobante: 0,
+          estado: 'RECHAZADO_AFIP',
+        },
+      });
+
       // Save rejected sale history for auditing
       await prisma.venta.create({
         data: {

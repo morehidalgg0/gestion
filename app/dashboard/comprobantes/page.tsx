@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { FileText, Printer, RotateCcw, Search } from 'lucide-react';
+import { FileText, Printer, RotateCcw, Search, FilePlus2 } from 'lucide-react';
 
 type Venta = {
   id: string;
@@ -15,10 +15,14 @@ type Venta = {
   estado: string;
   cae?: string | null;
   mensajeAfip?: string | null;
+  ventaOrigenId?: string | null;
   cliente?: {
     razonSocial: string;
     tipoDoc: string;
     nroDoc: string;
+    condicionIva?: string;
+    direccion?: string;
+    email?: string;
   };
   items?: Array<{ id: string }>;
 };
@@ -50,6 +54,17 @@ export default function ComprobantesPage() {
   const [issuingCreditNoteId, setIssuingCreditNoteId] = useState('');
   const [search, setSearch] = useState('');
   const [estado, setEstado] = useState('TODOS');
+
+  // Facturación a demanda (Ticket X -> Factura fiscal)
+  const [facturarTicket, setFacturarTicket] = useState<Venta | null>(null);
+  const [facturarTipo, setFacturarTipo] = useState('auto');
+  const [facturarTipoDoc, setFacturarTipoDoc] = useState('CUIT');
+  const [facturarNroDoc, setFacturarNroDoc] = useState('');
+  const [facturarRazonSocial, setFacturarRazonSocial] = useState('');
+  const [facturarCondicionIva, setFacturarCondicionIva] = useState('Responsable Inscripto');
+  const [facturarDireccion, setFacturarDireccion] = useState('');
+  const [facturarEmail, setFacturarEmail] = useState('');
+  const [submittingFactura, setSubmittingFactura] = useState(false);
 
   const loadVentas = async () => {
     const ventasRes = await fetch('/api/tenant/ventas');
@@ -154,6 +169,73 @@ export default function ComprobantesPage() {
       setError(err.message);
     } finally {
       setIssuingCreditNoteId('');
+    }
+  };
+
+  const facturaPara = (venta: Venta) => {
+    return ventas.find((item) => item.ventaOrigenId === venta.id);
+  };
+
+  const canFacturarTicket = (venta: Venta) => {
+    return (
+      (session?.rol === 'OWNER' || session?.rol === 'EMPLOYEE') &&
+      venta.tipoComprobante === 'Factura X' &&
+      !facturaPara(venta)
+    );
+  };
+
+  const openFacturarTicket = (venta: Venta) => {
+    setFacturarTicket(venta);
+    setFacturarTipo('auto');
+    setFacturarTipoDoc(venta.cliente?.tipoDoc || 'CUIT');
+    setFacturarNroDoc(venta.cliente?.nroDoc || '');
+    setFacturarRazonSocial(venta.cliente?.razonSocial || '');
+    setFacturarCondicionIva(venta.cliente?.condicionIva || 'Responsable Inscripto');
+    setFacturarDireccion(venta.cliente?.direccion || '');
+    setFacturarEmail(venta.cliente?.email || '');
+    setError('');
+  };
+
+  const handleSubmitFacturar = async () => {
+    if (!facturarTicket) return;
+
+    if (!facturarNroDoc.trim() || !facturarRazonSocial.trim()) {
+      setError('Completá documento y razón social del receptor para emitir la factura.');
+      return;
+    }
+
+    setSubmittingFactura(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/tenant/ventas/${facturarTicket.id}/factura`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipoComprobante: facturarTipo === 'auto' ? undefined : facturarTipo,
+          datosFacturacion: {
+            tipoDoc: facturarTipoDoc,
+            nroDoc: facturarNroDoc,
+            razonSocial: facturarRazonSocial,
+            condicionIva: facturarCondicionIva,
+            direccion: facturarDireccion,
+            email: facturarEmail,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'No se pudo emitir la factura.');
+      }
+
+      setFacturarTicket(null);
+      await loadVentas();
+      window.open(`/dashboard/ventas/${data.venta.id}/print`, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido al facturar.');
+    } finally {
+      setSubmittingFactura(false);
     }
   };
 
@@ -316,6 +398,28 @@ export default function ComprobantesPage() {
                       Ver / Imprimir
                     </a>
                   )}
+                  {canFacturarTicket(venta) && (
+                    <button
+                      onClick={() => openFacturarTicket(venta)}
+                      className="btn btn-primary btn-sm"
+                      disabled={submittingFactura}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                    >
+                      <FilePlus2 size={14} />
+                      Facturar
+                    </button>
+                  )}
+                  {facturaPara(venta) && (
+                    <a
+                      href={`/dashboard/ventas/${facturaPara(venta)!.id}/print`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="badge badge-success"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      Facturado: {formatVoucherNumber(facturaPara(venta)!)}
+                    </a>
+                  )}
                   {canIssueCreditNote(venta) && (
                     <button
                       onClick={() => handleEmitCreditNote(venta)}
@@ -349,6 +453,120 @@ export default function ComprobantesPage() {
           </tbody>
         </table>
       </div>
+
+      {/* ON-DEMAND INVOICING MODAL (Ticket X -> Factura fiscal) */}
+      {facturarTicket && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ borderColor: 'var(--primary)' }}>
+            <div className="modal-header" style={{ backgroundColor: 'var(--primary-light)' }}>
+              <h3 style={{ color: 'var(--primary-hover)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FilePlus2 size={20} />
+                <span>Facturar Ticket X</span>
+              </h3>
+            </div>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <p style={{ fontSize: '0.9rem' }}>
+                Vas a emitir la factura fiscal del ticket <strong>{formatVoucherNumber(facturarTicket)}</strong> por{' '}
+                <strong>{formatMoney(facturarTicket.total)}</strong>. El stock ya fue descontado al momento del ticket
+                original.
+              </p>
+
+              <div className="form-group">
+                <label className="form-label">Tipo de Comprobante</label>
+                <select
+                  className="form-select"
+                  value={facturarTipo}
+                  onChange={(e) => setFacturarTipo(e.target.value)}
+                >
+                  <option value="auto">Automático (según condición IVA)</option>
+                  <option value="Factura A">Factura A</option>
+                  <option value="Factura B">Factura B</option>
+                  <option value="Factura C">Factura C</option>
+                </select>
+              </div>
+
+              <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.75rem', backgroundColor: 'var(--bg-secondary)' }}>
+                <strong style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.65rem' }}>Datos fiscales del receptor</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '0.8fr 1.2fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <select
+                    className="form-select"
+                    value={facturarTipoDoc}
+                    onChange={(e) => setFacturarTipoDoc(e.target.value)}
+                    disabled={facturarTipo === 'Factura A'}
+                  >
+                    <option value="CUIT">CUIT</option>
+                    <option value="DNI">DNI</option>
+                    <option value="99">Sin identificar</option>
+                  </select>
+                  <input
+                    className="form-input"
+                    placeholder={facturarTipoDoc === 'CUIT' ? 'CUIT sin guiones' : 'Número documento'}
+                    value={facturarNroDoc}
+                    onChange={(e) => setFacturarNroDoc(e.target.value)}
+                  />
+                </div>
+                <input
+                  className="form-input"
+                  placeholder="Razón social / Nombre completo"
+                  value={facturarRazonSocial}
+                  onChange={(e) => setFacturarRazonSocial(e.target.value)}
+                  style={{ marginBottom: '0.5rem' }}
+                />
+                <select
+                  className="form-select"
+                  value={facturarCondicionIva}
+                  onChange={(e) => setFacturarCondicionIva(e.target.value)}
+                  disabled={facturarTipo === 'Factura A'}
+                  style={{ marginBottom: '0.5rem' }}
+                >
+                  <option value="Consumidor Final">Consumidor Final</option>
+                  <option value="Responsable Inscripto">Responsable Inscripto</option>
+                  <option value="Monotributista">Monotributista</option>
+                  <option value="Exento">Exento</option>
+                </select>
+                <input
+                  className="form-input"
+                  placeholder="Dirección fiscal (opcional)"
+                  value={facturarDireccion}
+                  onChange={(e) => setFacturarDireccion(e.target.value)}
+                  style={{ marginBottom: '0.5rem' }}
+                />
+                <input
+                  className="form-input"
+                  type="email"
+                  placeholder="Email (opcional)"
+                  value={facturarEmail}
+                  onChange={(e) => setFacturarEmail(e.target.value)}
+                />
+              </div>
+
+              {error && (
+                <div style={{ padding: '1rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: 'var(--radius-md)', fontSize: '0.9rem' }}>
+                  {error}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer" style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => setFacturarTicket(null)}
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                disabled={submittingFactura}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmitFacturar}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                disabled={submittingFactura}
+              >
+                {submittingFactura ? 'Emitiendo CAE AFIP...' : 'Emitir Factura Fiscal'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
