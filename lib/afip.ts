@@ -74,14 +74,15 @@ function getDocTipoCode(tipo: string): number {
 
 /**
  * Maps the customer's IVA condition (RG 5616) to the AFIP CondicionIVAReceptorId.
+ * Values validated against FEParamGetCondicionIvaReceptor (homologación).
  */
 function getCondicionIvaReceptorId(condicion: string): number {
   switch (condicion) {
-    case 'Responsable Inscripto': return 1;
-    case 'Exento': return 2;
-    case 'Consumidor Final': return 3;
-    case 'Monotributista': return 4;
-    default: return 5; // Sujeto No Categorizado
+    case 'Responsable Inscripto': return 1; // IVA Responsable Inscripto
+    case 'Monotributista': return 6; // Responsable Monotributo
+    case 'Exento': return 4; // IVA Sujeto Exento
+    case 'Consumidor Final': return 5; // Consumidor Final
+    default: return 7; // Sujeto No Categorizado
   }
 }
 
