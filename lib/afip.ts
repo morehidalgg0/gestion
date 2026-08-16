@@ -18,6 +18,7 @@ export interface InvoiceRequest {
   tipoComprobante: 'Factura A' | 'Factura B' | 'Factura C' | 'Factura X' | 'Nota de Crédito A' | 'Nota de Crédito B' | 'Nota de Crédito C' | 'Nota de Crédito X';
   clienteTipoDoc: string; // 'DNI', 'CUIT', '99' (Sin Identificar)
   clienteNroDoc: string;
+  clienteCondicionIva: string; // 'Consumidor Final', 'Responsable Inscripto', 'Monotributista', 'Exento'
   items: InvoiceItem[];
   modo: 'demo' | 'homologacion' | 'produccion';
   certificadoEncriptado?: string | null;
@@ -68,6 +69,19 @@ function getDocTipoCode(tipo: string): number {
     case 'CUIT': return 80;
     case 'DNI': return 96;
     default: return 99; // Sin Identificar
+  }
+}
+
+/**
+ * Maps the customer's IVA condition (RG 5616) to the AFIP CondicionIVAReceptorId.
+ */
+function getCondicionIvaReceptorId(condicion: string): number {
+  switch (condicion) {
+    case 'Responsable Inscripto': return 1;
+    case 'Exento': return 2;
+    case 'Consumidor Final': return 3;
+    case 'Monotributista': return 4;
+    default: return 5; // Sujeto No Categorizado
   }
 }
 
@@ -225,6 +239,7 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
       CbteDesde: nextVoucherNumber,
       CbteHasta: nextVoucherNumber,
       CbteFch: parseInt(new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 8), 10).toString(),
+      condicionIvaReceptorId: getCondicionIvaReceptorId(req.clienteCondicionIva || ''),
       ImpTotal: parseFloat(impTotal.toFixed(2)),
       ImpTotConc: 0,
       ImpNeto: parseFloat(impNeto.toFixed(2)),

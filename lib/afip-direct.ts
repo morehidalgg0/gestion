@@ -265,6 +265,7 @@ export interface VoucherData {
   CbteDesde: number;
   CbteHasta: number;
   CbteFch: string;
+  condicionIvaReceptorId?: number;
   ImpTotal: number;
   ImpTotConc: number;
   ImpNeto: number;
@@ -290,17 +291,18 @@ function buildDetRequestXml(data: VoucherData): string {
     ['CbteDesde', data.CbteDesde],
     ['CbteHasta', data.CbteHasta],
     ['CbteFch', data.CbteFch],
-    ['ImpTotal', fmtAmount(data.ImpTotal)],
-    ['ImpTotConc', fmtAmount(data.ImpTotConc)],
-    ['ImpNeto', fmtAmount(data.ImpNeto)],
-    ['ImpOpEx', fmtAmount(data.ImpOpEx)],
-    ['ImpIVA', fmtAmount(data.ImpIVA)],
-    ['ImpTrib', fmtAmount(data.ImpTrib)],
-    ['MonId', data.MonId],
-    ['MonCotiz', fmtAmount(data.MonCotiz)],
   ];
 
   let xml = fixedKeys.map(([name, value]) => `<fe:${name}>${value}</fe:${name}>`).join('');
+
+  if (data.condicionIvaReceptorId !== undefined) {
+    xml += `<fe:CondicionIVAReceptorId>${data.condicionIvaReceptorId}</fe:CondicionIVAReceptorId>`;
+  }
+
+  xml += ['ImpTotal', 'ImpTotConc', 'ImpNeto', 'ImpOpEx', 'ImpIVA', 'ImpTrib', 'MonCotiz']
+    .map((name) => `<fe:${name}>${fmtAmount(data[name as keyof VoucherData] as number)}</fe:${name}>`)
+    .join('');
+  xml += `<fe:MonId>${data.MonId}</fe:MonId>`;
 
   if (data.iva && data.iva.length > 0) {
     xml +=

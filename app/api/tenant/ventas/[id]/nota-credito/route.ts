@@ -127,6 +127,7 @@ export async function POST(
       tipoComprobante: tipoNotaCredito as any,
       clienteTipoDoc: original.cliente.tipoDoc,
       clienteNroDoc: original.cliente.nroDoc,
+      clienteCondicionIva: original.cliente.condicionIva,
       items: invoiceItems.map((item) => ({
         nombre: item.nombre,
         cantidad: item.cantidad,

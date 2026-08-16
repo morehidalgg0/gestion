@@ -292,6 +292,7 @@ export async function POST(req: NextRequest) {
       tipoComprobante,
       clienteTipoDoc: cliente.tipoDoc,
       clienteNroDoc: cliente.nroDoc,
+      clienteCondicionIva: cliente.condicionIva,
       items: invoiceItems.map((i) => ({
         nombre: i.nombre,
         cantidad: i.cantidad,
