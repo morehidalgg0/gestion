@@ -1,6 +1,5 @@
-import Afip from '@afipsdk/afip.js';
+import { getLastVoucher, createVoucher, type VoucherData, type AlicIva, type CbteAsoc } from './afip-direct';
 import { decrypt } from './crypto';
-import os from 'os';
 
 export interface InvoiceItem {
   nombre: string;
@@ -73,7 +72,7 @@ function getDocTipoCode(tipo: string): number {
 /**
  * Authorizes a sales invoice.
  * If mode = 'demo' or certificates are missing, it processes internally.
- * Otherwise, it communicates with ARCA (AFIP) Web Services.
+ * Otherwise, it communicates directly with ARCA (AFIP) Web Services (WSAA + WSFE v1).
  */
 export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult> {
   if (req.tipoComprobante === 'Factura X' || req.tipoComprobante === 'Nota de Crédito X') {
@@ -100,7 +99,7 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
 
   for (const item of req.items) {
     const itemTotal = item.cantidad * item.precioUnitario;
-    
+
     if (isTipoC(req.tipoComprobante)) {
       // Monotributista issues Factura C (no discriminated IVA, total is taxed as net)
       impNeto += itemTotal;
@@ -141,7 +140,7 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
     const simulatedCae = `DEMO${Math.floor(100000000000 + Math.random() * 900000000000)}`;
     const simulatedVencimiento = new Date();
     simulatedVencimiento.setDate(simulatedVencimiento.getDate() + 10); // CAE expires in 10 days
-    
+
     return {
       estado: 'DEMO',
       numeroComprobante: 0, // Will be set by API Route based on DB counter or local increment
@@ -151,61 +150,22 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
     };
   }
 
-  // 3. REAL AFIP WSFEv1 CONNECTION
+  // 3. REAL AFIP WSFEv1 CONNECTION (direct WSAA + WSFE, no third-party gateway)
   try {
     // Decrypt credentials. The config stores one IV per encrypted file as "certIv:keyIv".
     const [certIv, keyIv] = req.iv.includes(':') ? req.iv.split(':') : [req.iv, req.iv];
     const cert = decrypt(req.certificadoEncriptado, certIv);
     const key = decrypt(req.claveEncriptada, keyIv);
-
-    // Initialize AFIP client with cross-platform temp directory for XML token caching
-    const afip = new Afip({
-      CUIT: parseInt(req.cuitEmisor.replace(/\D/g, ''), 10),
-      production: req.modo === 'produccion',
-      cert: cert,
-      key: key,
-      res_folder: os.tmpdir(),
-    } as any);
+    const production = req.modo === 'produccion';
+    const cuit = parseInt(req.cuitEmisor.replace(/\D/g, ''), 10);
 
     // Fetch the last authorized voucher from AFIP in real-time
-    const lastVoucher = await afip.ElectronicBilling.getLastVoucher(req.puntoVenta, cbteTipo);
+    const lastVoucher = await getLastVoucher(production, cert, key, cuit, req.puntoVenta, cbteTipo);
     const nextVoucherNumber = lastVoucher + 1;
 
-    // Prepare billing structure
-    const data: any = {
-      CantReg: 1,
-      PtoVta: req.puntoVenta,
-      CbteTipo: cbteTipo,
-      Concepto: 1, // 1 = Productos
-      DocTipo: docTipo,
-      DocNro: docNro,
-      CbteDesde: nextVoucherNumber,
-      CbteHasta: nextVoucherNumber,
-      CbteFch: parseInt(new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 8), 10),
-      ImpTotal: parseFloat(impTotal.toFixed(2)),
-      ImpTotConc: 0,
-      ImpNeto: parseFloat(impNeto.toFixed(2)),
-      ImpOpEx: parseFloat(impOpEx.toFixed(2)),
-      ImpTrib: 0,
-      ImpIVA: parseFloat(impIva.toFixed(2)),
-      FchServDesde: null,
-      FchServHasta: null,
-      FchVtoPago: null,
-      MonId: 'PES',
-      MonCotiz: 1,
-    };
-
-    if (isNotaCredito(req.tipoComprobante) && req.comprobanteAsociado) {
-      data.CbtesAsoc = [{
-        Tipo: getCbteTipoCode(req.comprobanteAsociado.tipoComprobante),
-        PtoVta: req.comprobanteAsociado.puntoVenta,
-        Nro: req.comprobanteAsociado.numeroComprobante,
-      }];
-    }
-
     // Discriminate IVA details if not Factura C / Nota de Crédito C
+    const ivaArray: AlicIva[] = [];
     if (!isTipoC(req.tipoComprobante)) {
-      const ivaArray: any[] = [];
       if (neto21 > 0) {
         ivaArray.push({
           Id: 5, // Code 5 is 21% in AFIP
@@ -220,19 +180,38 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
           Importe: parseFloat(iva105.toFixed(2)),
         });
       }
-      
-      // AFIP rejects requests with discriminated IVA but empty array
-      if (ivaArray.length > 0) {
-        data.Iva = ivaArray;
-      }
     }
 
-    // Call AFIP Web Service
-    const res = await afip.ElectronicBilling.createVoucher(data);
-
-    if (!res || !res.CAE) {
-      throw new Error('AFIP did not return a valid CAE number.');
+    let cbtesAsoc: CbteAsoc[] | undefined;
+    if (isNotaCredito(req.tipoComprobante) && req.comprobanteAsociado) {
+      cbtesAsoc = [{
+        Tipo: getCbteTipoCode(req.comprobanteAsociado.tipoComprobante),
+        PtoVta: req.comprobanteAsociado.puntoVenta,
+        Nro: req.comprobanteAsociado.numeroComprobante,
+      }];
     }
+
+    const data: VoucherData = {
+      Concepto: 1, // 1 = Productos
+      DocTipo: docTipo,
+      DocNro: docNro,
+      CbteDesde: nextVoucherNumber,
+      CbteHasta: nextVoucherNumber,
+      CbteFch: parseInt(new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 8), 10).toString(),
+      ImpTotal: parseFloat(impTotal.toFixed(2)),
+      ImpTotConc: 0,
+      ImpNeto: parseFloat(impNeto.toFixed(2)),
+      ImpOpEx: parseFloat(impOpEx.toFixed(2)),
+      ImpTrib: 0,
+      ImpIVA: parseFloat(impIva.toFixed(2)),
+      MonId: 'PES',
+      MonCotiz: 1,
+      iva: ivaArray.length > 0 ? ivaArray : undefined,
+      cbtesAsoc,
+    };
+
+    // Call AFIP Web Service directly
+    const res = await createVoucher(production, cert, key, cuit, req.puntoVenta, cbteTipo, data);
 
     // Parse CAE expiration date (AFIP format YYYYMMDD to Date object)
     let caeVencimientoDate = new Date();
@@ -252,15 +231,20 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
     };
   } catch (error: any) {
     console.error('AFIP invoice authorization failed:', error);
-    const status = error?.response?.status || error?.status;
-    let mensaje = error.message || 'Error desconocido al conectar con AFIP';
-    if (status === 401) {
+    const rawMessage = error?.message || 'Error desconocido al conectar con AFIP';
+    let mensaje = rawMessage;
+    if (/Computador no autorizado/i.test(rawMessage)) {
       mensaje =
-        'AFIP rechazó la autenticación (HTTP 401). Verificá que: 1) el certificado .crt y la clave .key correspondan al CUIT configurado, 2) el certificado esté vigente (no vencido), y 3) hayas autorizado el servicio "Facturación Electrónica - wsfe" para este certificado en el Administrador de Relaciones de AFIP (entorno de ' +
+        'AFIP: el certificado no está autorizado para el servicio "Facturación Electrónica - wsfe". En el entorno de ' +
+        (req.modo === 'produccion' ? 'producción (Administrador de Relaciones de Clave Fiscal)' : 'homologación (WSASS)') +
+        ', asociá el certificado al servicio wsfe.';
+    } else if (/AC de confianza|untrusted/i.test(rawMessage)) {
+      mensaje =
+        'AFIP: el certificado no es válido para el entorno de ' +
         (req.modo === 'produccion' ? 'producción' : 'homologación') +
-        ').';
-    } else if (status === 500 || status === 502) {
-      mensaje = 'AFIP devolvió un error interno del servidor (HTTP ' + status + '). Reintentá en unos minutos.';
+        ' (emitido por una AC no confiable en este entorno). Verificá que el certificado cargado corresponda al entorno seleccionado.';
+    } else if (/expired/i.test(rawMessage)) {
+      mensaje = 'AFIP: el certificado digital está vencido.';
     }
     return {
       estado: 'RECHAZADO_AFIP',
