@@ -206,7 +206,8 @@ export async function getLastVoucher(
 
   const cbteNro = response.match(/<CbteNro>(\d+)<\/CbteNro>/)?.[1];
   if (cbteNro === undefined) {
-    throw new Error('AFIP: no se pudo obtener el último comprobante autorizado');
+    // AFIP may omit CbteNro (or return xsi:nil) when there are no vouchers yet.
+    return 0;
   }
   return parseInt(cbteNro, 10);
 }
