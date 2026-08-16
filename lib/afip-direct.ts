@@ -111,9 +111,14 @@ function xmlUnescape(xml: string): string {
 
 function extractFault(xml: string): string | null {
   const faultstring = xml.match(/<faultstring>([\s\S]*?)<\/faultstring>/)?.[1];
-  if (faultstring) return faultstring.trim();
-  const msg = xml.match(/<Msg>([\s\S]*?)<\/Msg>/)?.[1];
-  if (msg) return msg.trim();
+  if (faultstring) {
+    const msg = faultstring.trim();
+    if (!msg.startsWith('IMPORTANTE')) return msg;
+  }
+  const msgs = Array.from(xml.matchAll(/<Msg>([\s\S]*?)<\/Msg>/g)).map(m => m[1].trim());
+  for (const msg of msgs) {
+    if (msg && !msg.startsWith('IMPORTANTE')) return msg;
+  }
   return null;
 }
 
@@ -409,12 +414,16 @@ export async function createVoucher(
   const resultado = response.match(/<Resultado>([A-Z])<\/Resultado>/)?.[1];
   const errMsgs = Array.from(response.matchAll(/<Msg>([\s\S]*?)<\/Msg>/g)).map((m) => m[1].trim());
   if (resultado === 'R') {
-    throw new Error(errMsgs.length > 0 ? errMsgs.join(' - ') : 'AFIP rechazó el comprobante');
+    const realErrors = errMsgs.filter(m => !m.startsWith('IMPORTANTE'));
+    throw new Error(realErrors.length > 0 ? realErrors.join(' - ') : 'AFIP rechazó el comprobante');
   }
 
   const cae = response.match(/<CAE>(\d+)<\/CAE>/)?.[1];
   const vto = response.match(/<CAEFchVto>(\d+)<\/CAEFchVto>/)?.[1];
   if (!cae || !vto) {
+    if (resultado === 'A') {
+      console.error('[AFIP] Resultado=A pero sin CAE. Response:', response.slice(0, 1000));
+    }
     const info = errMsgs.filter(m => !m.startsWith('IMPORTANTE')).join(' - ');
     throw new Error(info || 'AFIP no devolvió un CAE válido');
   }
