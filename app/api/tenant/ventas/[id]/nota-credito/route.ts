@@ -119,6 +119,7 @@ export async function POST(
     const ivaCredito = original.iva.toNumber() * ratio;
 
     const afipResult = await emitirFactura({
+      empresaId,
       cuitEmisor: configAfip.cuit,
       razonSocialEmisor: configAfip.razonSocial,
       condicionIvaEmisor: configAfip.condicionIva as any,

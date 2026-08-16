@@ -78,6 +78,10 @@ model ConfiguracionAfip {
   certificadoEncriptado String?  @db.Text         // CRT encriptado
   claveEncriptada       String?  @db.Text         // private KEY encriptada
   iv                    String?                   // Vector de inicialización para AES-256-GCM
+  taToken               String?  @db.Text         // Ticket de Acceso WSAA (token)
+  taSign                String?  @db.Text         // Ticket de Acceso WSAA (sign)
+  taExpiration          DateTime?                 // Expiración del TA (para reutilizarlo en homologación)
+  taCertFingerprint     String?                   // Huella del certificado que generó el TA
 }
 
 model Producto {

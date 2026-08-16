@@ -27,9 +27,19 @@ interface WsaaTicket {
 
 const taCache = new Map<string, WsaaTicket>();
 
+function certFingerprint(certPem: string): string {
+  return crypto.createHash('sha256').update(certPem).digest('hex').slice(0, 16);
+}
+
+export interface TaStore {
+  load(): Promise<{ token: string; sign: string; expirationTime: Date; certFingerprint: string } | null>;
+  save(token: string, sign: string, expirationTime: Date, certFingerprint: string): Promise<void>;
+}
+
 function buildTra(service: string): string {
   const now = new Date();
-  const uniqueId = Math.floor(now.getTime() / 1000);
+  // WSAA valida uniqueId como entero de 32 bits: segundos + aleatorio evita colisiones en el mismo segundo
+  const uniqueId = Math.floor(now.getTime() / 1000) + Math.floor(Math.random() * 1000);
   const gen = new Date(now.getTime() - 600000).toISOString();
   const exp = new Date(now.getTime() + 600000).toISOString();
   return (
@@ -112,12 +122,32 @@ async function getWsaaTicket(
   certPem: string,
   keyPem: string,
   cuit: number,
-  service = 'wsfe'
+  service = 'wsfe',
+  taStore?: TaStore
 ): Promise<WsaaTicket> {
-  const cacheKey = `${production ? 'prod' : 'dev'}:${cuit}`;
+  const fp = certFingerprint(certPem);
+  const cacheKey = `${production ? 'prod' : 'dev'}:${cuit}:${fp}`;
   const cached = taCache.get(cacheKey);
   if (cached && cached.expirationTime.getTime() > Date.now() + 600000) {
     return cached;
+  }
+
+  // Reutilizar el TA persistido (WSAA homologación solo admite un TA válido por certificado+servicio)
+  if (taStore) {
+    const stored = await taStore.load();
+    if (
+      stored &&
+      stored.certFingerprint === fp &&
+      stored.expirationTime.getTime() > Date.now() + 600000
+    ) {
+      const ticket: WsaaTicket = {
+        token: stored.token,
+        sign: stored.sign,
+        expirationTime: stored.expirationTime,
+      };
+      taCache.set(cacheKey, ticket);
+      return ticket;
+    }
   }
 
   const signedTra = signTra(buildTra(service), certPem, keyPem);
@@ -150,6 +180,9 @@ async function getWsaaTicket(
 
   const ticket = { token, sign, expirationTime: new Date(expirationTime) };
   taCache.set(cacheKey, ticket);
+  if (taStore) {
+    await taStore.save(token, sign, ticket.expirationTime, fp);
+  }
   return ticket;
 }
 
@@ -187,9 +220,10 @@ export async function getLastVoucher(
   keyPem: string,
   cuit: number,
   ptoVta: number,
-  cbteTipo: number
+  cbteTipo: number,
+  taStore?: TaStore
 ): Promise<number> {
-  const ticket = await getWsaaTicket(production, certPem, keyPem, cuit);
+  const ticket = await getWsaaTicket(production, certPem, keyPem, cuit, 'wsfe', taStore);
   const body = buildWsfeEnvelope(
     'FECompUltimoAutorizado',
     buildAuthXml(ticket, cuit) +
@@ -308,9 +342,10 @@ export async function getPuntosVenta(
   production: boolean,
   certPem: string,
   keyPem: string,
-  cuit: number
+  cuit: number,
+  taStore?: TaStore
 ): Promise<PtoVenta[]> {
-  const ticket = await getWsaaTicket(production, certPem, keyPem, cuit);
+  const ticket = await getWsaaTicket(production, certPem, keyPem, cuit, 'wsfe', taStore);
   const body = buildWsfeEnvelope('FEParamGetPtosVenta', buildAuthXml(ticket, cuit));
   const url = production ? WSFE_URLS.prod : WSFE_URLS.dev;
   const response = xmlUnescape(await postSoap(url, body, `"${WSFE_NS}FEParamGetPtosVenta"`));
@@ -347,9 +382,10 @@ export async function createVoucher(
   cuit: number,
   ptoVta: number,
   cbteTipo: number,
-  data: VoucherData
+  data: VoucherData,
+  taStore?: TaStore
 ): Promise<VoucherResult> {
-  const ticket = await getWsaaTicket(production, certPem, keyPem, cuit);
+  const ticket = await getWsaaTicket(production, certPem, keyPem, cuit, 'wsfe', taStore);
   const body = buildWsfeEnvelope(
     'FECAESolicitar',
     buildAuthXml(ticket, cuit) +

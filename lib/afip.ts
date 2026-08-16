@@ -1,5 +1,6 @@
-import { getLastVoucher, createVoucher, type VoucherData, type AlicIva, type CbteAsoc } from './afip-direct';
+import { getLastVoucher, createVoucher, type VoucherData, type AlicIva, type CbteAsoc, type TaStore } from './afip-direct';
 import { decrypt } from './crypto';
+import { prisma } from './prisma';
 
 export interface InvoiceItem {
   nombre: string;
@@ -9,6 +10,7 @@ export interface InvoiceItem {
 }
 
 export interface InvoiceRequest {
+  empresaId?: string;
   cuitEmisor: string;
   razonSocialEmisor: string;
   condicionIvaEmisor: 'Responsable Inscripto' | 'Monotributista';
@@ -159,8 +161,33 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
     const production = req.modo === 'produccion';
     const cuit = parseInt(req.cuitEmisor.replace(/\D/g, ''), 10);
 
+    // Persistir y reutilizar el Ticket de Acceso (WSAA homologación admite 1 TA por certificado+servicio)
+    const taStore: TaStore | undefined = req.empresaId
+      ? {
+          load: async () => {
+            const cfg = await prisma.configuracionAfip.findUnique({
+              where: { empresaId: req.empresaId as string },
+              select: { taToken: true, taSign: true, taExpiration: true, taCertFingerprint: true },
+            });
+            if (!cfg?.taToken || !cfg?.taSign || !cfg?.taExpiration) return null;
+            return {
+              token: cfg.taToken,
+              sign: cfg.taSign,
+              expirationTime: cfg.taExpiration,
+              certFingerprint: cfg.taCertFingerprint || '',
+            };
+          },
+          save: async (token, sign, expirationTime, certFingerprint) => {
+            await prisma.configuracionAfip.update({
+              where: { empresaId: req.empresaId as string },
+              data: { taToken: token, taSign: sign, taExpiration: expirationTime, taCertFingerprint: certFingerprint },
+            });
+          },
+        }
+      : undefined;
+
     // Fetch the last authorized voucher from AFIP in real-time
-    const lastVoucher = await getLastVoucher(production, cert, key, cuit, req.puntoVenta, cbteTipo);
+    const lastVoucher = await getLastVoucher(production, cert, key, cuit, req.puntoVenta, cbteTipo, taStore);
     const nextVoucherNumber = lastVoucher + 1;
 
     // Discriminate IVA details if not Factura C / Nota de Crédito C
@@ -211,7 +238,7 @@ export async function emitirFactura(req: InvoiceRequest): Promise<InvoiceResult>
     };
 
     // Call AFIP Web Service directly
-    const res = await createVoucher(production, cert, key, cuit, req.puntoVenta, cbteTipo, data);
+    const res = await createVoucher(production, cert, key, cuit, req.puntoVenta, cbteTipo, data, taStore);
 
     // Parse CAE expiration date (AFIP format YYYYMMDD to Date object)
     let caeVencimientoDate = new Date();

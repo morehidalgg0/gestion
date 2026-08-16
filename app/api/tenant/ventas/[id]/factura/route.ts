@@ -187,6 +187,7 @@ export async function POST(
 
     // 7. Request AFIP authorization
     const afipResult = await emitirFactura({
+      empresaId,
       cuitEmisor: configAfip.cuit,
       razonSocialEmisor: configAfip.razonSocial,
       condicionIvaEmisor: configAfip.condicionIva as 'Responsable Inscripto' | 'Monotributista',

@@ -284,6 +284,7 @@ export async function POST(req: NextRequest) {
 
     // Execute AFIP Web Service authorization
     const afipResult = await emitirFactura({
+      empresaId,
       cuitEmisor: configAfip.cuit,
       razonSocialEmisor: configAfip.razonSocial,
       condicionIvaEmisor: configAfip.condicionIva as any,
