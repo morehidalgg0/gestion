@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, ArrowUpDown, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, ArrowUpDown, AlertCircle, Trash2, Pencil } from 'lucide-react';
 
 export default function ProductosPage() {
   const [productos, setProductos] = useState<any[]>([]);
@@ -11,6 +11,7 @@ export default function ProductosPage() {
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   // Form states for Add Product
@@ -31,6 +32,10 @@ export default function ProductosPage() {
   const [nuevoPrecioVenta, setNuevoPrecioVenta] = useState('');
   const [nuevoPrecioCosto, setNuevoPrecioCosto] = useState('');
   const [adjustError, setAdjustError] = useState('');
+
+  // Form state for Edit Product
+  const [editForm, setEditForm] = useState<any>(null);
+  const [editError, setEditError] = useState('');
 
   const loadProducts = async () => {
     try {
@@ -161,6 +166,59 @@ export default function ProductosPage() {
     setShowAdjustModal(true);
   };
 
+  const openEditModal = (product: any) => {
+    setSelectedProduct(product);
+    setEditForm({
+      codigo: product.codigo,
+      nombre: product.nombre,
+      categoria: product.categoria,
+      unidad: product.unidad,
+      precioCosto: product.precioCosto.toString(),
+      precioVenta: product.precioVenta.toString(),
+      ivaPorcentaje: parseFloat(product.ivaPorcentaje).toString(),
+      stockActual: parseFloat(product.stockActual).toString(),
+      stockMinimo: parseFloat(product.stockMinimo).toString(),
+    });
+    setEditError('');
+    setShowEditModal(true);
+  };
+
+  const handleEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditError('');
+
+    try {
+      const res = await fetch('/api/tenant/productos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedProduct.id,
+          codigo: editForm.codigo,
+          nombre: editForm.nombre,
+          categoria: editForm.categoria,
+          unidad: editForm.unidad,
+          precioCosto: parseFloat(editForm.precioCosto) || 0,
+          precioVenta: parseFloat(editForm.precioVenta) || 0,
+          ivaPorcentaje: parseFloat(editForm.ivaPorcentaje) || 21,
+          stockActual: parseFloat(editForm.stockActual) || 0,
+          stockMinimo: parseFloat(editForm.stockMinimo) || 0,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo actualizar el producto.');
+      }
+
+      setSelectedProduct(null);
+      setShowEditModal(false);
+      loadProducts();
+    } catch (err: any) {
+      setEditError(err.message);
+    }
+  };
+
   const filtered = productos.filter((p) => {
     const term = search.toLowerCase();
     return (
@@ -244,6 +302,10 @@ export default function ProductosPage() {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button onClick={() => openEditModal(prod)} className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.65rem' }}>
+                          <Pencil size={14} />
+                          <span>Editar</span>
+                        </button>
                         <button onClick={() => openAdjustModal(prod)} className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.65rem' }}>
                           <ArrowUpDown size={14} />
                           <span>Ajustar Stock / Precios</span>
@@ -400,6 +462,87 @@ export default function ProductosPage() {
               <div className="modal-footer">
                 <button type="button" onClick={() => setShowAdjustModal(false)} className="btn btn-secondary">Cancelar</button>
                 <button type="submit" className="btn btn-primary">Guardar Ajuste</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL 3: EDIT PRODUCT */}
+      {showEditModal && selectedProduct && editForm && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3>✏️ Editar Producto</h3>
+              <button onClick={() => setShowEditModal(false)} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem' }}>✕</button>
+            </div>
+            <form onSubmit={handleEditProduct}>
+              <div className="modal-body">
+                {editError && (
+                  <div style={{ padding: '0.75rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                    ⚠️ {editError}
+                  </div>
+                )}
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Código Único (Barcode / Interno)</label>
+                    <input type="text" className="form-input" value={editForm.codigo} onChange={(e) => setEditForm({ ...editForm, codigo: e.target.value })} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Unidad de Venta</label>
+                    <select className="form-select" value={editForm.unidad} onChange={(e) => setEditForm({ ...editForm, unidad: e.target.value })}>
+                      <option value="kg">Por Kilogramo (kg)</option>
+                      <option value="g">Por kilogramo, venta fraccionada en gramos</option>
+                      <option value="unidad">Por Unidad</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Nombre del Producto</label>
+                  <input type="text" className="form-input" value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} required />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Categoría</label>
+                    <input type="text" className="form-input" value={editForm.categoria} onChange={(e) => setEditForm({ ...editForm, categoria: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Alícuota IVA (%)</label>
+                    <select className="form-select" value={editForm.ivaPorcentaje} onChange={(e) => setEditForm({ ...editForm, ivaPorcentaje: e.target.value })}>
+                      <option value="21">21.0% (Tasa Estándar)</option>
+                      <option value="10.5">10.5% (Tasa Reducida)</option>
+                      <option value="0">0.0% (Exento)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Precio de Costo ($)</label>
+                    <input type="number" step="0.01" className="form-input" value={editForm.precioCosto} onChange={(e) => setEditForm({ ...editForm, precioCosto: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{editForm.unidad === 'g' ? 'Precio de Venta por kg (Con IVA) ($)' : 'Precio de Venta (Con IVA) ($)'}</label>
+                    <input type="number" step="0.01" className="form-input" value={editForm.precioVenta} onChange={(e) => setEditForm({ ...editForm, precioVenta: e.target.value })} required />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Stock Actual {editForm.unidad === 'g' ? '(en gramos)' : editForm.unidad === 'kg' ? '(en kg)' : '(en unidades)'}</label>
+                    <input type="number" step="0.001" className="form-input" value={editForm.stockActual} onChange={(e) => setEditForm({ ...editForm, stockActual: e.target.value })} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Stock Mínimo {editForm.unidad === 'g' ? '(en gramos)' : editForm.unidad === 'kg' ? '(en kg)' : '(en unidades)'}</label>
+                    <input type="number" step="0.001" className="form-input" value={editForm.stockMinimo} onChange={(e) => setEditForm({ ...editForm, stockMinimo: e.target.value })} required />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowEditModal(false)} className="btn btn-secondary">Cancelar</button>
+                <button type="submit" className="btn btn-primary">Guardar Cambios</button>
               </div>
             </form>
           </div>

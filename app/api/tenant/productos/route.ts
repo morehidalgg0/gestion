@@ -145,6 +145,73 @@ export async function PUT(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  try {
+    const empresaId = getTenantId(req);
+    const {
+      id,
+      codigo,
+      nombre,
+      categoria,
+      unidad,
+      precioCosto,
+      precioVenta,
+      ivaPorcentaje,
+      stockActual,
+      stockMinimo,
+    } = await req.json();
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID de producto requerido.' }, { status: 400 });
+    }
+
+    if (!codigo || !nombre || !unidad) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios (código, nombre, unidad).' }, { status: 400 });
+    }
+
+    const prod = await prisma.producto.findFirst({
+      where: { id, empresaId },
+    });
+
+    if (!prod || !prod.activo) {
+      return NextResponse.json({ error: 'Producto no encontrado.' }, { status: 404 });
+    }
+
+    if (codigo !== prod.codigo) {
+      const duplicate = await prisma.producto.findFirst({
+        where: { empresaId, codigo, NOT: { id } },
+      });
+
+      if (duplicate) {
+        return NextResponse.json(
+          { error: `Ya existe un producto con el código "${codigo}" en tu comercio.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    const producto = await prisma.producto.update({
+      where: { id },
+      data: {
+        codigo,
+        nombre,
+        categoria: categoria || 'General',
+        unidad,
+        precioCosto: parseFloat(precioCosto) || 0,
+        precioVenta: parseFloat(precioVenta) || 0,
+        ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
+        stockActual: parseFloat(stockActual) || 0,
+        stockMinimo: parseFloat(stockMinimo) || 0,
+      },
+    });
+
+    return NextResponse.json(producto);
+  } catch (error: any) {
+    console.error('Product edit error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
