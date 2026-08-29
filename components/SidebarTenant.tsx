@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingCart, Package, Users, DollarSign, Settings, BarChart2, LogOut, ShieldAlert, ReceiptText, ClipboardCheck, KeyRound, HandCoins } from 'lucide-react';
+import { ShoppingCart, Package, Users, DollarSign, Settings, BarChart2, LogOut, ShieldAlert, ReceiptText, ClipboardCheck, KeyRound, HandCoins, Wallet } from 'lucide-react';
 
 export default function SidebarTenant() {
   const pathname = usePathname();
@@ -71,6 +71,7 @@ export default function SidebarTenant() {
     { name: 'Clientes', href: '/dashboard/clientes', icon: Users, ownerOnly: true },
     { name: 'Cuentas Corrientes', href: '/dashboard/cuentas-corrientes', icon: DollarSign, ownerOnly: true },
     { name: 'Configuración AFIP', href: '/dashboard/config-afip', icon: Settings, ownerOnly: true },
+    { name: 'Ganancia Real', href: '/dashboard/rentabilidad', icon: Wallet, ownerOnly: true },
     { name: 'Reportes', href: '/dashboard/reportes', icon: BarChart2, ownerOnly: true },
     { name: 'Personal / Caja', href: '/dashboard/usuarios', icon: ShieldAlert, ownerOnly: true },
   ];

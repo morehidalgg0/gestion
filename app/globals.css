@@ -729,6 +729,9 @@ a:hover {
   .pos-cart {
     height: 600px;
   }
+  .rentabilidad-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 @media (max-width: 768px) {

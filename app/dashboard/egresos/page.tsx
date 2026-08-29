@@ -137,11 +137,14 @@ export default function EgresosPage() {
             <div className="form-group">
               <label className="form-label">Categoría</label>
               <select className="form-select" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+                <option value="Costo de mercadería">Costo de mercadería</option>
                 <option value="Proveedor">Proveedor</option>
-                <option value="Servicios">Servicios</option>
+                <option value="Sueldos">Sueldos / Personal</option>
                 <option value="Alquiler">Alquiler</option>
-                <option value="Sueldos">Sueldos</option>
+                <option value="Servicios">Servicios</option>
                 <option value="Impuestos">Impuestos</option>
+                <option value="Seguros">Seguros</option>
+                <option value="Publicidad">Publicidad</option>
                 <option value="Retiro">Retiro de caja</option>
                 <option value="Otro">Otro</option>
               </select>
