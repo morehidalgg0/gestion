@@ -24,11 +24,46 @@ function getBusinessDay(dateValue?: string) {
   return { date, start, end };
 }
 
+function getRange(periodo: string, desde?: string | null, hasta?: string | null) {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
+
+  if (periodo === 'personalizado' && desde && hasta) {
+    return {
+      start: new Date(`${desde}T00:00:00-03:00`),
+      end: new Date(`${hasta}T23:59:59.999-03:00`),
+    };
+  }
+
+  // Por defecto: período desde/hoy (histórico)
+  let start: Date;
+  const end = new Date(`${today}T23:59:59.999-03:00`);
+
+  if (periodo === 'hoy') {
+    start = new Date(`${today}T00:00:00-03:00`);
+  } else if (periodo === 'semana') {
+    start = new Date(`${today}T00:00:00-03:00`);
+    start.setDate(start.getDate() - 7);
+  } else if (periodo === 'mes') {
+    start = new Date(`${today}T00:00:00-03:00`);
+    start.setDate(start.getDate() - 30);
+  } else if (periodo === 'todos') {
+    start = new Date(`${today}T00:00:00-03:00`);
+    start.setFullYear(start.getFullYear() - 50);
+  } else {
+    // Default 'hoy'
+    start = new Date(`${today}T00:00:00-03:00`);
+  }
+
+  return { start, end };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
     const { searchParams } = new URL(req.url);
-    const { start, end } = getBusinessDay(searchParams.get('fecha') || undefined);
+    const periodo = searchParams.get('periodo') || 'hoy';
+
+    const { start, end } = getRange(periodo, searchParams.get('desde'), searchParams.get('hasta'));
 
     const egresos = await prisma.egresoCaja.findMany({
       where: {
