@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, ArrowUpDown, AlertCircle, Trash2, Pencil, ScanBarcode } from 'lucide-react';
+import { Plus, ArrowUpDown, AlertCircle, Trash2, Pencil, ScanBarcode, Loader2 } from 'lucide-react';
 import { playBeepSuccess, playBeepError } from '@/lib/sound';
 
 export default function ProductosPage() {
@@ -28,6 +28,7 @@ export default function ProductosPage() {
   const [stockActual, setStockActual] = useState('');
   const [stockMinimo, setStockMinimo] = useState('');
   const [addError, setAddError] = useState('');
+  const [savingAdd, setSavingAdd] = useState(false);
 
   // Form states for Adjust Stock
   const [tipoAjuste, setTipoAjuste] = useState('compra');
@@ -155,6 +156,7 @@ export default function ProductosPage() {
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError('');
+    setSavingAdd(true);
 
     try {
       const res = await fetch('/api/tenant/productos', {
@@ -216,6 +218,8 @@ export default function ProductosPage() {
       loadProducts();
     } catch (err: any) {
       setAddError(err.message);
+    } finally {
+      setSavingAdd(false);
     }
   };
 
@@ -550,7 +554,7 @@ export default function ProductosPage() {
                     <label className="form-label">Unidad de Venta</label>
                     <select className="form-select" value={unidad} onChange={(e) => setUnidad(e.target.value)}>
                       <option value="kg">Por Kilogramo (kg)</option>
-                      <option value="g">Por kilogramo, venta fraccionada en gramos</option>
+                      <option value="g">Por gramo (venta fraccionada)</option>
                       <option value="unidad">Por Unidad</option>
                     </select>
                   </div>
@@ -601,13 +605,13 @@ export default function ProductosPage() {
 
                 <div className="form-group">
                   <label className="form-label">Nombre del Producto</label>
-                  <input type="text" className="form-input" placeholder="Ej: Mix de Frutos Secos Premium" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+                  <input type="text" className="form-input" placeholder="Ej: Nombre del producto" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
                 </div>
 
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Categoría</label>
-                    <input type="text" className="form-input" placeholder="Ej: Frutos Secos" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+                    <input type="text" className="form-input" placeholder="Ej: Categoría del producto" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Alícuota IVA (%)</label>
@@ -642,8 +646,11 @@ export default function ProductosPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" onClick={() => setShowAddModal(false)} className="btn btn-secondary">Cancelar</button>
-                <button type="submit" className="btn btn-primary">Crear Producto</button>
+                <button type="button" onClick={() => setShowAddModal(false)} className="btn btn-secondary" disabled={savingAdd}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={savingAdd}>
+                  {savingAdd ? <Loader2 size={16} className="spin" /> : <Plus size={16} />}
+                  <span>{savingAdd ? 'Creando...' : 'Crear Producto'}</span>
+                </button>
               </div>
             </form>
           </div>
@@ -752,7 +759,7 @@ export default function ProductosPage() {
                     <label className="form-label">Unidad de Venta</label>
                     <select className="form-select" value={editForm.unidad} onChange={(e) => setEditForm({ ...editForm, unidad: e.target.value })}>
                       <option value="kg">Por Kilogramo (kg)</option>
-                      <option value="g">Por kilogramo, venta fraccionada en gramos</option>
+                      <option value="g">Por gramo (venta fraccionada)</option>
                       <option value="unidad">Por Unidad</option>
                     </select>
                   </div>
