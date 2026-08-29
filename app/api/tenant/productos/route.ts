@@ -232,6 +232,7 @@ export async function PUT(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const empresaId = getTenantId(req);
+    const body = await req.json();
     const {
       id,
       codigo,
@@ -245,17 +246,11 @@ export async function PATCH(req: NextRequest) {
       stockMinimo,
       imagenUrl,
       codigosAlternativos,
-    } = await req.json();
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'ID de producto requerido.' }, { status: 400 });
     }
-
-    if (!codigo || !nombre || !unidad) {
-      return NextResponse.json({ error: 'Faltan campos obligatorios (código, nombre, unidad).' }, { status: 400 });
-    }
-
-    const altCodes = normalizeAltCodes(codigosAlternativos, codigo);
 
     const prod = await prisma.producto.findFirst({
       where: { id, empresaId },
@@ -265,7 +260,14 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Producto no encontrado.' }, { status: 404 });
     }
 
-    if (codigo !== prod.codigo) {
+    // If editing the main fields (not a pure image update), require the basics
+    const editingMain = codigo !== undefined || nombre !== undefined || unidad !== undefined;
+    if (editingMain && (!codigo || !nombre || !unidad)) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios (código, nombre, unidad).' }, { status: 400 });
+    }
+
+    const nextCodigo = codigo !== undefined ? codigo : prod.codigo;
+    if (codigo !== undefined && codigo !== prod.codigo) {
       const duplicate = await prisma.producto.findFirst({
         where: { empresaId, codigo, NOT: { id } },
       });
@@ -278,36 +280,46 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    if (await codeExistsElsewhere(empresaId, altCodes, id)) {
-      return NextResponse.json(
-        { error: 'Uno de los códigos alternativos ya pertenece a otro producto.' },
-        { status: 400 }
-      );
+    // If alternative codes are being updated, validate and replace them
+    let data: any = {};
+
+    if (codigo !== undefined) data.codigo = codigo;
+    if (nombre !== undefined) data.nombre = nombre;
+    if (categoria !== undefined) data.categoria = categoria || 'General';
+    if (unidad !== undefined) data.unidad = unidad;
+    if (precioCosto !== undefined) data.precioCosto = parseFloat(precioCosto) || 0;
+    if (precioVenta !== undefined) data.precioVenta = parseFloat(precioVenta) || 0;
+    if (ivaPorcentaje !== undefined) data.ivaPorcentaje = parseFloat(ivaPorcentaje) || 21.0;
+    if (stockActual !== undefined) data.stockActual = parseFloat(stockActual) || 0;
+    if (stockMinimo !== undefined) data.stockMinimo = parseFloat(stockMinimo) || 0;
+    if (imagenUrl !== undefined) {
+      data.imagenUrl = imagenUrl === '' || imagenUrl === null ? null : imagenUrl;
     }
 
     const producto = await prisma.$transaction(async (tx) => {
       const updated = await tx.producto.update({
         where: { id },
-        data: {
-          codigo,
-          nombre,
-          categoria: categoria || 'General',
-          unidad,
-          precioCosto: parseFloat(precioCosto) || 0,
-          precioVenta: parseFloat(precioVenta) || 0,
-          ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
-          stockActual: parseFloat(stockActual) || 0,
-          stockMinimo: parseFloat(stockMinimo) || 0,
-          imagenUrl: imagenUrl === '' ? null : imagenUrl || undefined,
-        },
+        data,
       });
-      await replaceAltCodes(updated.id, altCodes);
+
+      // Replace alternative codes only when explicitly provided
+      if (codigosAlternativos !== undefined) {
+        const altCodes = normalizeAltCodes(codigosAlternativos, nextCodigo);
+        if (await codeExistsElsewhere(empresaId, altCodes, id)) {
+          throw new Error('Uno de los códigos alternativos ya pertenece a otro producto.');
+        }
+        await replaceAltCodes(updated.id, altCodes);
+      }
+
       return updated;
     });
 
     return NextResponse.json(producto);
   } catch (error: any) {
     console.error('Product edit error:', error);
+    if (error.message === 'Uno de los códigos alternativos ya pertenece a otro producto.') {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
