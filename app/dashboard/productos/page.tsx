@@ -57,7 +57,8 @@ export default function ProductosPage() {
     const { upload } = await import('@vercel/blob/client');
     const newBlob = await upload(file.name, file, {
       access: 'public',
-      handleUploadUrl: `/api/tenant/productos/imagen?productoId=${productoId}`,
+      handleUploadUrl: '/api/tenant/productos/imagen',
+      clientPayload: JSON.stringify({ productoId }),
     });
     return newBlob.url;
   };
