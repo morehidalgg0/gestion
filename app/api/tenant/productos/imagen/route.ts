@@ -38,6 +38,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         // Only allow image content types
         return {
+          access: 'public',
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
           tokenPayload: JSON.stringify({ empresaId, productoId }),
         };
