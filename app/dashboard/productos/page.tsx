@@ -55,7 +55,11 @@ export default function ProductosPage() {
   // Upload image file to Vercel Blob (direct from browser), returns public URL
   const uploadImageToBlob = async (file: File, productoId: string): Promise<string> => {
     const { upload } = await import('@vercel/blob/client');
-    const newBlob = await upload(file.name, file, {
+    // get the original extension, falling back to the mime type
+    const ext = (file.name.match(/\.([a-zA-Z0-9]+)$/) || [])[1] || 'jpg';
+    // Unique pathname per product + timestamp so files never collide in Blob
+    const pathname = `productos/${productoId}/${Date.now()}.${ext}`;
+    const newBlob = await upload(pathname, file, {
       access: 'public',
       handleUploadUrl: '/api/tenant/productos/imagen',
       clientPayload: JSON.stringify({ productoId }),
