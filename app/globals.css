@@ -625,6 +625,9 @@ a:hover {
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 550px;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -648,10 +651,13 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .modal-body {
   padding: 1.5rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
@@ -660,6 +666,7 @@ a:hover {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 /* Login/Register Landing layout */
@@ -934,7 +941,6 @@ a:hover {
 
   .modal-content {
     max-height: calc(100svh - 1rem);
-    overflow-y: auto;
   }
 
   .modal-header,
