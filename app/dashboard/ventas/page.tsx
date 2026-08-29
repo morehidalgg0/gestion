@@ -160,7 +160,10 @@ export default function PosPage() {
   };
 
   const findProductByCode = (code: string) => {
-    return productos.find((p) => p.codigo.trim() === code.trim());
+    return productos.find((p) =>
+      p.codigo.trim() === code.trim() ||
+      (p.codigos || []).some((c: any) => (c.codigo || '').trim() === code.trim())
+    );
   };
 
   const flashFeedback = (ok: boolean, msg: string) => {
@@ -373,10 +376,12 @@ export default function PosPage() {
   const filteredProducts = productos.filter((p) => {
     const term = search.toLowerCase();
     const stock = parseFloat(p.stockActual);
+    const altCodes = (p.codigos || []).map((c: any) => (c.codigo || '').toLowerCase());
     return (
       stock > 0 && // Only show items with stock available to sell
       (p.nombre.toLowerCase().includes(term) ||
         p.codigo.toLowerCase().includes(term) ||
+        altCodes.some((c: string) => c.includes(term)) ||
         p.categoria.toLowerCase().includes(term))
     );
   });

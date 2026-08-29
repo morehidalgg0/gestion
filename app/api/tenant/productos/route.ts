@@ -14,12 +14,76 @@ export async function GET(req: NextRequest) {
     const empresaId = getTenantId(req);
     const productos = await prisma.producto.findMany({
       where: { empresaId, activo: true },
+      include: {
+        codigos: {
+          select: { id: true, codigo: true },
+        },
+      },
       orderBy: { nombre: 'asc' },
     });
     return NextResponse.json(productos);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+}
+
+// Normaliza la lista de códigos alternativos venida del cliente (array o string
+// separado por comas) quitando vacíos, duplicados y el código principal.
+function normalizeAltCodes(codigos: any, principal: string): string[] {
+  const list = Array.isArray(codigos)
+    ? codigos
+    : typeof codigos === 'string'
+      ? codigos.split(',')
+      : [];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of list) {
+    const code = String(raw || '').trim();
+    if (!code) continue;
+    if (code === principal.trim()) continue;
+    if (seen.has(code)) continue;
+    seen.add(code);
+    result.push(code);
+  }
+  return result;
+}
+
+// Devuelve true si algún código (principal o alternativo) ya existe en otro
+// producto de la empresa (excluyendo un producto específico si se pasa).
+async function codeExistsElsewhere(
+  empresaId: string,
+  codes: string[],
+  excludeProductId?: string
+): Promise<boolean> {
+  if (!codes.length) return false;
+  const [inAlt, inMain] = await Promise.all([
+    prisma.productoCodigo.findMany({
+      where: {
+        codigo: { in: codes },
+        producto: { empresaId, ...(excludeProductId ? { NOT: { id: excludeProductId } } : {}) },
+      },
+      select: { codigo: true },
+    }),
+    prisma.producto.findMany({
+      where: {
+        empresaId,
+        codigo: { in: codes },
+        ...(excludeProductId ? { NOT: { id: excludeProductId } } : {}),
+      },
+      select: { codigo: true },
+    }),
+  ]);
+  return inAlt.length > 0 || inMain.length > 0;
+}
+
+// Persiste la lista de códigos alternativos en un prod (transaction).
+async function replaceAltCodes(productoId: string, codes: string[]) {
+  await prisma.$transaction([
+    prisma.productoCodigo.deleteMany({ where: { productoId } }),
+    ...codes.map((codigo) =>
+      prisma.productoCodigo.create({ data: { productoId, codigo } })
+    ),
+  ]);
 }
 
 export async function POST(req: NextRequest) {
@@ -37,11 +101,14 @@ export async function POST(req: NextRequest) {
       stockActual,
       stockMinimo,
       imagenUrl,
+      codigosAlternativos,
     } = await req.json();
 
     if (!codigo || !nombre || !unidad) {
       return NextResponse.json({ error: 'Faltan campos obligatorios (código, nombre, unidad).' }, { status: 400 });
     }
+
+    const altCodes = normalizeAltCodes(codigosAlternativos, codigo);
 
     // Check duplicate code *within this business only*
     const existing = await prisma.producto.findFirst({
@@ -58,21 +125,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (await codeExistsElsewhere(empresaId, altCodes)) {
+      return NextResponse.json(
+        { error: 'Uno de los códigos alternativos ya pertenece a otro producto.' },
+        { status: 400 }
+      );
+    }
+
     if (existing) {
-      const producto = await prisma.producto.update({
-        where: { id: existing.id },
-        data: {
-          nombre,
-          categoria: categoria || 'General',
-          unidad,
-          precioCosto: parseFloat(precioCosto) || 0,
-          precioVenta: parseFloat(precioVenta) || 0,
-          ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
-          stockActual: parseFloat(stockActual) || 0,
-          stockMinimo: parseFloat(stockMinimo) || 0,
-          imagenUrl: imagenUrl || null,
-          activo: true,
-        },
+      const producto = await prisma.$transaction(async (tx) => {
+        const updated = await tx.producto.update({
+          where: { id: existing.id },
+          data: {
+            nombre,
+            categoria: categoria || 'General',
+            unidad,
+            precioCosto: parseFloat(precioCosto) || 0,
+            precioVenta: parseFloat(precioVenta) || 0,
+            ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
+            stockActual: parseFloat(stockActual) || 0,
+            stockMinimo: parseFloat(stockMinimo) || 0,
+            imagenUrl: imagenUrl || null,
+            activo: true,
+          },
+        });
+        if (altCodes.length) {
+          await replaceAltCodes(updated.id, altCodes);
+        }
+        return updated;
       });
 
       return NextResponse.json(producto);
@@ -91,6 +171,7 @@ export async function POST(req: NextRequest) {
         stockActual: parseFloat(stockActual) || 0,
         stockMinimo: parseFloat(stockMinimo) || 0,
         imagenUrl: imagenUrl || null,
+        codigos: altCodes.length ? { create: altCodes.map((codigo) => ({ codigo })) } : undefined,
       },
     });
 
@@ -163,6 +244,7 @@ export async function PATCH(req: NextRequest) {
       stockActual,
       stockMinimo,
       imagenUrl,
+      codigosAlternativos,
     } = await req.json();
 
     if (!id) {
@@ -172,6 +254,8 @@ export async function PATCH(req: NextRequest) {
     if (!codigo || !nombre || !unidad) {
       return NextResponse.json({ error: 'Faltan campos obligatorios (código, nombre, unidad).' }, { status: 400 });
     }
+
+    const altCodes = normalizeAltCodes(codigosAlternativos, codigo);
 
     const prod = await prisma.producto.findFirst({
       where: { id, empresaId },
@@ -194,20 +278,31 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    const producto = await prisma.producto.update({
-      where: { id },
-      data: {
-        codigo,
-        nombre,
-        categoria: categoria || 'General',
-        unidad,
-        precioCosto: parseFloat(precioCosto) || 0,
-        precioVenta: parseFloat(precioVenta) || 0,
-        ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
-        stockActual: parseFloat(stockActual) || 0,
-        stockMinimo: parseFloat(stockMinimo) || 0,
-        imagenUrl: imagenUrl === '' ? null : imagenUrl || undefined,
-      },
+    if (await codeExistsElsewhere(empresaId, altCodes, id)) {
+      return NextResponse.json(
+        { error: 'Uno de los códigos alternativos ya pertenece a otro producto.' },
+        { status: 400 }
+      );
+    }
+
+    const producto = await prisma.$transaction(async (tx) => {
+      const updated = await tx.producto.update({
+        where: { id },
+        data: {
+          codigo,
+          nombre,
+          categoria: categoria || 'General',
+          unidad,
+          precioCosto: parseFloat(precioCosto) || 0,
+          precioVenta: parseFloat(precioVenta) || 0,
+          ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
+          stockActual: parseFloat(stockActual) || 0,
+          stockMinimo: parseFloat(stockMinimo) || 0,
+          imagenUrl: imagenUrl === '' ? null : imagenUrl || undefined,
+        },
+      });
+      await replaceAltCodes(updated.id, altCodes);
+      return updated;
     });
 
     return NextResponse.json(producto);

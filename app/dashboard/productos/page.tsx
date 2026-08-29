@@ -17,6 +17,8 @@ export default function ProductosPage() {
 
   // Form states for Add Product
   const [codigo, setCodigo] = useState('');
+  const [addAltCodigos, setAddAltCodigos] = useState<string[]>([]);
+  const [addAltInput, setAddAltInput] = useState('');
   const [nombre, setNombre] = useState('');
   const [categoria, setCategoria] = useState('');
   const [unidad, setUnidad] = useState('kg');
@@ -36,6 +38,7 @@ export default function ProductosPage() {
 
   // Form state for Edit Product
   const [editForm, setEditForm] = useState<any>(null);
+  const [editAltInput, setEditAltInput] = useState('');
   const [editError, setEditError] = useState('');
 
   const [scanBeat, setScanBeat] = useState(0);
@@ -91,6 +94,16 @@ export default function ProductosPage() {
     }
   };
 
+  const addAltCode = (list: string[], setList: (v: string[]) => void, value: string) => {
+    const code = value.trim();
+    if (!code) return;
+    setList([...list, code]);
+  };
+
+  const removeAltCode = (list: string[], setList: (v: string[]) => void, code: string) => {
+    setList(list.filter((c) => c !== code));
+  };
+
   const getPriceLabel = (product: any) => {
     const price = parseFloat(product.precioVenta).toLocaleString('es-AR');
     if (product.unidad === 'g') return `$${price} / kg`;
@@ -127,7 +140,10 @@ export default function ProductosPage() {
         scanBufferRef.current = '';
         setSearch(code);
         setScanBeat((b) => b + 1);
-        const found = productos.find((p) => (p.codigo || '').trim() === code);
+        const found = productos.find((p) =>
+          (p.codigo || '').trim() === code ||
+          (p.codigos || []).some((c: any) => (c.codigo || '').trim() === code)
+        );
         if (found) playBeepSuccess(); else playBeepError();
       }
     };
@@ -146,6 +162,7 @@ export default function ProductosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           codigo,
+          codigosAlternativos: addAltCodigos,
           nombre,
           categoria,
           unidad,
@@ -181,6 +198,8 @@ export default function ProductosPage() {
 
       // Reset form
       setCodigo('');
+      setAddAltCodigos([]);
+      setAddAltInput('');
       setNombre('');
       setCategoria('');
       setUnidad('kg');
@@ -264,8 +283,10 @@ export default function ProductosPage() {
   const openEditModal = (product: any) => {
     setSelectedProduct(product);
     pendingEditImageRef.current = null;
+    setEditAltInput('');
     setEditForm({
       codigo: product.codigo,
+      codigosAlternativos: (product.codigos || []).map((c: any) => c.codigo),
       nombre: product.nombre,
       categoria: product.categoria,
       unidad: product.unidad,
@@ -292,6 +313,7 @@ export default function ProductosPage() {
         body: JSON.stringify({
           id: selectedProduct.id,
           codigo: editForm.codigo,
+          codigosAlternativos: editForm.codigosAlternativos || [],
           nombre: editForm.nombre,
           categoria: editForm.categoria,
           unidad: editForm.unidad,
@@ -335,9 +357,11 @@ export default function ProductosPage() {
 
   const filtered = productos.filter((p) => {
     const term = search.toLowerCase();
+    const altCodes = (p.codigos || []).map((c: any) => (c.codigo || '').toLowerCase());
     return (
       p.nombre.toLowerCase().includes(term) ||
       p.codigo.toLowerCase().includes(term) ||
+      altCodes.some((c: string) => c.includes(term)) ||
       p.categoria.toLowerCase().includes(term)
     );
   });
@@ -366,7 +390,10 @@ export default function ProductosPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onClick={() => { setScanBeat(0); }}
-            style={scanBeat && search ? { borderColor: productos.find((p) => (p.codigo || '').trim() === search.trim()) ? '#22c55e' : '#ef4444' } : undefined}
+            style={scanBeat && search ? { borderColor: productos.find((p) =>
+              (p.codigo || '').trim() === search.trim() ||
+              (p.codigos || []).some((c: any) => (c.codigo || '').trim() === search.trim())
+            ) ? '#22c55e' : '#ef4444' } : undefined}
           />
         </div>
       </div>
@@ -413,7 +440,18 @@ export default function ProductosPage() {
                         </div>
                       )}
                     </td>
-                    <td><code>{prod.codigo}</code></td>
+                    <td>
+                      <code>{prod.codigo}</code>
+                      {(prod.codigos && prod.codigos.length > 0) && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2rem', marginTop: '0.25rem' }}>
+                          {prod.codigos.map((c: any) => (
+                            <span key={c.id} className="badge badge-secondary" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }} title={`Código alternativo: ${c.codigo}`}>
+                              {c.codigo}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ fontWeight: 600 }}>{prod.nombre}</td>
                     <td><span className="badge badge-secondary" style={{ backgroundColor: 'var(--bg-tertiary)' }}>{prod.categoria}</span></td>
                     <td>{prod.unidad}</td>
@@ -516,6 +554,49 @@ export default function ProductosPage() {
                       <option value="unidad">Por Unidad</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Códigos de barra alternativos</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Escanéalo o escribilo acá (mismo producto, otro proveedor)"
+                      value={addAltInput}
+                      onChange={(e) => setAddAltInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addAltCode(addAltCodigos, setAddAltCodigos, addAltInput);
+                          setAddAltInput('');
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        addAltCode(addAltCodigos, setAddAltCodigos, addAltInput);
+                        setAddAltInput('');
+                      }}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  {addAltCodigos.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
+                      {addAltCodigos.map((c) => (
+                        <span key={c} className="badge badge-secondary" style={{ padding: '0.3rem 0.6rem' }}>
+                          {c}
+                          <button type="button" onClick={() => removeAltCode(addAltCodigos, setAddAltCodigos, c)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: '0.3rem', color: '#b91c1c', fontSize: '0.8rem' }}>✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                    Opcional. Si el mismo artículo viene de otro proveedor con otro código de barra, agregalo así al escanear cualquiera se identifica este producto.
+                  </p>
                 </div>
 
                 <div className="form-group">
@@ -675,6 +756,57 @@ export default function ProductosPage() {
                       <option value="unidad">Por Unidad</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Códigos de barra alternativos</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Escanéalo o escribilo acá (mismo producto, otro proveedor)"
+                      value={editAltInput}
+                      onChange={(e) => setEditAltInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const current = editForm.codigosAlternativos || [];
+                          const code = editAltInput.trim();
+                          if (code) setEditForm({ ...editForm, codigosAlternativos: [...current, code] });
+                          setEditAltInput('');
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        const current = editForm.codigosAlternativos || [];
+                        const code = editAltInput.trim();
+                        if (code) setEditForm({ ...editForm, codigosAlternativos: [...current, code] });
+                        setEditAltInput('');
+                      }}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  {((editForm.codigosAlternativos || []).length > 0) && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem' }}>
+                      {(editForm.codigosAlternativos || []).map((c: string) => (
+                        <span key={c} className="badge badge-secondary" style={{ padding: '0.3rem 0.6rem' }}>
+                          {c}
+                          <button
+                            type="button"
+                            onClick={() => setEditForm({ ...editForm, codigosAlternativos: (editForm.codigosAlternativos || []).filter((x: string) => x !== c) })}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', marginLeft: '0.3rem', color: '#b91c1c', fontSize: '0.8rem' }}
+                          >✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
+                    Si el mismo artículo viene de otro proveedor con otro código de barra, agregalo así al escanear cualquiera se identifica este producto.
+                  </p>
                 </div>
 
                 <div className="form-group">

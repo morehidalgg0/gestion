@@ -102,8 +102,23 @@ model Producto {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   ventaItems    VentaItem[]
+  codigos       ProductoCodigo[]
 
   @@unique([empresaId, codigo])
+}
+
+// Códigos de barra alternativos de un producto (mismo artículo comprado a
+// distintos proveedores con su propio EAN). Al escanear cualquiera de ellos se
+// identifica el mismo producto.
+model ProductoCodigo {
+  id         String   @id @default(uuid())
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  codigo     String
+  createdAt  DateTime @default(now())
+
+  @@unique([productoId, codigo])
+  @@index([codigo])
 }
 
 model Cliente {
