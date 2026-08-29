@@ -614,8 +614,9 @@ a:hover {
   background-color: rgba(28, 25, 23, 0.4);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  overflow-y: auto;
   z-index: 1000;
   padding: 1rem;
 }
@@ -625,12 +626,11 @@ a:hover {
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 550px;
-  max-height: calc(100vh - 2rem);
-  display: flex;
-  flex-direction: column;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
 }
 
 @keyframes modalSlideUp {
@@ -651,23 +651,10 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-shrink: 0;
 }
 
 .modal-body {
   padding: 1.5rem;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.modal-body::-webkit-scrollbar {
-  width: 8px;
-}
-.modal-body::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
 }
 
 .modal-footer {
@@ -676,7 +663,6 @@ a:hover {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  flex-shrink: 0;
 }
 
 /* Login/Register Landing layout */
@@ -945,12 +931,13 @@ a:hover {
   }
 
   .modal-overlay {
-    align-items: flex-end;
+    align-items: flex-start;
     padding: 0.5rem;
   }
 
   .modal-content {
-    max-height: calc(100svh - 1rem);
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .modal-header,
