@@ -529,7 +529,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 160px;
+  height: 235px;
   padding: 1rem;
 }
 
@@ -891,7 +891,7 @@ a:hover {
   }
 
   .pos-product-card {
-    min-height: 136px;
+    min-height: 235px;
     height: auto;
     padding: 0.85rem;
   }

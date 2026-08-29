@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
       ivaPorcentaje,
       stockActual,
       stockMinimo,
+      imagenUrl,
     } = await req.json();
 
     if (!codigo || !nombre || !unidad) {
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
           ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
           stockActual: parseFloat(stockActual) || 0,
           stockMinimo: parseFloat(stockMinimo) || 0,
+          imagenUrl: imagenUrl || null,
           activo: true,
         },
       });
@@ -88,6 +90,7 @@ export async function POST(req: NextRequest) {
         ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
         stockActual: parseFloat(stockActual) || 0,
         stockMinimo: parseFloat(stockMinimo) || 0,
+        imagenUrl: imagenUrl || null,
       },
     });
 
@@ -159,6 +162,7 @@ export async function PATCH(req: NextRequest) {
       ivaPorcentaje,
       stockActual,
       stockMinimo,
+      imagenUrl,
     } = await req.json();
 
     if (!id) {
@@ -202,6 +206,7 @@ export async function PATCH(req: NextRequest) {
         ivaPorcentaje: parseFloat(ivaPorcentaje) || 21.0,
         stockActual: parseFloat(stockActual) || 0,
         stockMinimo: parseFloat(stockMinimo) || 0,
+        imagenUrl: imagenUrl === '' ? null : imagenUrl || undefined,
       },
     });
 

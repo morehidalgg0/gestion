@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, ArrowUpDown, AlertCircle, Trash2, Pencil } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, ArrowUpDown, AlertCircle, Trash2, Pencil, ScanBarcode } from 'lucide-react';
+import { playBeepSuccess, playBeepError } from '@/lib/sound';
 
 export default function ProductosPage() {
   const [productos, setProductos] = useState<any[]>([]);
@@ -37,6 +38,47 @@ export default function ProductosPage() {
   const [editForm, setEditForm] = useState<any>(null);
   const [editError, setEditError] = useState('');
 
+  const [scanBeat, setScanBeat] = useState(0);
+
+  // Product image upload state (blob URL the client uploaded + local preview)
+  const [addImagenUrl, setAddImagenUrl] = useState('');
+  const [addImagenPreview, setAddImagenPreview] = useState('');
+  const [addImagenUploading, setAddImagenUploading] = useState(false);
+  const addImagenInputRef = useRef<HTMLInputElement>(null);
+  const [editImagenUploading, setEditImagenUploading] = useState(false);
+  const editImagenInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload image file to Vercel Blob (direct from browser), returns public URL
+  const uploadImageToBlob = async (file: File, productoId: string): Promise<string> => {
+    const { upload } = await import('@vercel/blob/client');
+    const newBlob = await upload(file.name, file, {
+      access: 'public',
+      handleUploadUrl: `/api/tenant/productos/imagen?productoId=${productoId}`,
+    });
+    return newBlob.url;
+  };
+
+  // Keep the selected file for later (after product is created with an id)
+  const pendingAddImageRef = useRef<File | null>(null);
+  const pendingEditImageRef = useRef<File | null>(null);
+
+  const handleAddImageSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    pendingAddImageRef.current = file;
+    setAddImagenPreview(URL.createObjectURL(file));
+    setAddImagenUrl('');
+    if (addImagenInputRef.current) addImagenInputRef.current.value = '';
+  };
+
+  const handleEditImageSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    pendingEditImageRef.current = file;
+    setEditForm((f: any) => ({ ...f, previewImagenUrl: URL.createObjectURL(file) }));
+    if (editImagenInputRef.current) editImagenInputRef.current.value = '';
+  };
+
   const loadProducts = async () => {
     try {
       const res = await fetch('/api/tenant/productos');
@@ -59,6 +101,40 @@ export default function ProductosPage() {
   useEffect(() => {
     loadProducts();
   }, []);
+
+  // Barcode scanner: capture HID-style input anywhere and search by code
+  const scanBufferRef = useRef('');
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const inField =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.tagName === 'SELECT' ||
+        target?.isContentEditable;
+
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        scanBufferRef.current += e.key;
+        if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = setTimeout(() => { scanBufferRef.current = ''; }, 80);
+        return;
+      }
+
+      if (e.key === 'Enter' && scanBufferRef.current.length >= 4 && !inField) {
+        e.preventDefault();
+        const code = scanBufferRef.current.trim();
+        scanBufferRef.current = '';
+        setSearch(code);
+        setScanBeat((b) => b + 1);
+        const found = productos.find((p) => (p.codigo || '').trim() === code);
+        if (found) playBeepSuccess(); else playBeepError();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productos]);
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +163,22 @@ export default function ProductosPage() {
         throw new Error(data.error || 'No se pudo crear el producto.');
       }
 
+      // If the user selected an image, upload it now (product already has an id)
+      if (pendingAddImageRef.current) {
+        setAddImagenUploading(true);
+        try {
+          const blobUrl = await uploadImageToBlob(pendingAddImageRef.current, data.id);
+          pendingAddImageRef.current = null;
+          await fetch('/api/tenant/productos', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: data.id, imagenUrl: blobUrl }),
+          });
+        } finally {
+          setAddImagenUploading(false);
+        }
+      }
+
       // Reset form
       setCodigo('');
       setNombre('');
@@ -97,6 +189,9 @@ export default function ProductosPage() {
       setIvaPorcentaje('21');
       setStockActual('');
       setStockMinimo('');
+      setAddImagenUrl('');
+      setAddImagenPreview('');
+      pendingAddImageRef.current = null;
       
       setShowAddModal(false);
       loadProducts();
@@ -168,6 +263,7 @@ export default function ProductosPage() {
 
   const openEditModal = (product: any) => {
     setSelectedProduct(product);
+    pendingEditImageRef.current = null;
     setEditForm({
       codigo: product.codigo,
       nombre: product.nombre,
@@ -178,6 +274,8 @@ export default function ProductosPage() {
       ivaPorcentaje: parseFloat(product.ivaPorcentaje).toString(),
       stockActual: parseFloat(product.stockActual).toString(),
       stockMinimo: parseFloat(product.stockMinimo).toString(),
+      imagenUrl: product.imagenUrl || '',
+      previewImagenUrl: product.imagenUrl || '',
     });
     setEditError('');
     setShowEditModal(true);
@@ -209,6 +307,22 @@ export default function ProductosPage() {
 
       if (!res.ok) {
         throw new Error(data.error || 'No se pudo actualizar el producto.');
+      }
+
+      // If the user selected a new image, upload it and update the URL
+      if (pendingEditImageRef.current) {
+        setEditImagenUploading(true);
+        try {
+          const blobUrl = await uploadImageToBlob(pendingEditImageRef.current, selectedProduct.id);
+          pendingEditImageRef.current = null;
+          await fetch('/api/tenant/productos', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: selectedProduct.id, imagenUrl: blobUrl }),
+          });
+        } finally {
+          setEditImagenUploading(false);
+        }
       }
 
       setSelectedProduct(null);
@@ -243,13 +357,18 @@ export default function ProductosPage() {
 
       {/* Search and Filters */}
       <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
-        <input
-          type="text"
-          className="form-input"
-          placeholder="🔍 Buscar por nombre, código o categoría..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ScanBarcode size={18} style={{ color: 'var(--primary)', flex: '0 0 auto' }} />
+          <input
+            type="text"
+            className="form-input"
+            placeholder="🔍 Buscar o escanear código de barras (nombre, código o categoría)..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClick={() => { setScanBeat(0); }}
+            style={scanBeat && search ? { borderColor: productos.find((p) => (p.codigo || '').trim() === search.trim()) ? '#22c55e' : '#ef4444' } : undefined}
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -260,6 +379,7 @@ export default function ProductosPage() {
           <table className="table">
             <thead>
               <tr>
+                <th>Imagen</th>
                 <th>Código</th>
                 <th>Nombre</th>
                 <th>Categoría</th>
@@ -280,6 +400,19 @@ export default function ProductosPage() {
 
                 return (
                   <tr key={prod.id} style={{ backgroundColor: isUnderMin ? '#fffefc' : undefined }}>
+                    <td>
+                      {prod.imagenUrl ? (
+                        <img
+                          src={prod.imagenUrl}
+                          alt={prod.nombre}
+                          style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', display: 'block' }}
+                        />
+                      ) : (
+                        <div style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          sin foto
+                        </div>
+                      )}
+                    </td>
                     <td><code>{prod.codigo}</code></td>
                     <td style={{ fontWeight: 600 }}>{prod.nombre}</td>
                     <td><span className="badge badge-secondary" style={{ backgroundColor: 'var(--bg-tertiary)' }}>{prod.categoria}</span></td>
@@ -321,7 +454,7 @@ export default function ProductosPage() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={11} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                     No se encontraron productos en el catálogo.
                   </td>
                 </tr>
@@ -346,6 +479,29 @@ export default function ProductosPage() {
                     ⚠️ {addError}
                   </div>
                 )}
+
+                {/* Image */}
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {addImagenPreview ? (
+                    <img src={addImagenPreview} alt="Vista previa" style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }} />
+                  ) : (
+                    <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center', padding: '0.25rem' }}>
+                      Sin imagen
+                    </div>
+                  )}
+                  <div>
+                    <label className="form-label" style={{ marginBottom: '0.3rem' }}>Imagen del producto</label>
+                    <input
+                      ref={addImagenInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleAddImageSelection}
+                      className="form-input"
+                      style={{ padding: '0.4rem' }}
+                    />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>Subí una foto de referencia para los empleados (opcional).</p>
+                  </div>
+                </div>
 
                 <div className="form-row">
                   <div className="form-group">
@@ -482,6 +638,29 @@ export default function ProductosPage() {
                     ⚠️ {editError}
                   </div>
                 )}
+
+                {/* Image */}
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {editForm.previewImagenUrl ? (
+                    <img src={editForm.previewImagenUrl} alt="Vista previa" style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }} />
+                  ) : (
+                    <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.75rem', textAlign: 'center', padding: '0.25rem' }}>
+                      Sin imagen
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <label className="form-label" style={{ marginBottom: '0.3rem' }}>Imagen del producto</label>
+                    <input
+                      ref={editImagenInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleEditImageSelection}
+                      className="form-input"
+                      style={{ padding: '0.4rem' }}
+                    />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>Seleccioná una imagen nueva para reemplazar la actual (opcional).</p>
+                  </div>
+                </div>
 
                 <div className="form-row">
                   <div className="form-group">

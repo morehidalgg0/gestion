@@ -66,6 +66,7 @@ export async function middleware(req: NextRequest) {
         (pathname === '/api/tenant/egresos' && (req.method === 'GET' || req.method === 'POST')) ||
         (pathname === '/api/tenant/password' && req.method === 'PUT') ||
         (pathname === '/api/tenant/productos' && (req.method === 'GET' || req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE')) ||
+        (pathname === '/api/tenant/productos/imagen' && req.method === 'POST') ||
         (pathname === '/api/tenant/clientes' && req.method === 'GET');
 
       if (pathname.startsWith('/dashboard') && !canAccessEmployeeDashboard) {

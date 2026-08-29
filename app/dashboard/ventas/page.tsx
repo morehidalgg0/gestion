@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ShoppingCart, Search, Trash2, CheckCircle2, AlertOctagon, HelpCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, Search, Trash2, CheckCircle2, AlertOctagon, ScanBarcode, Volume2, VolumeX } from 'lucide-react';
+import { playBeepSuccess, playBeepError } from '@/lib/sound';
 
 function todayArgentina() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' });
@@ -31,6 +32,16 @@ export default function PosPage() {
   const [successResult, setSuccessResult] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [cajaCerrada, setCajaCerrada] = useState<{ cerrado: boolean; cerradoAt?: string | null }>({ cerrado: false });
+
+  // Barcode scanner states
+  const scannerRef = useRef<HTMLInputElement>(null);
+  const scanBufferRef = useRef('');
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [scanError, setScanError] = useState('');
+  const [scannerEnabled, setScannerEnabled] = useState(true);
+  const [scanFeedback, setScanFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadData = async () => {
     try {
@@ -147,6 +158,76 @@ export default function PosPage() {
   const removeFromCart = (productoId: string) => {
     setCart(cart.filter((item) => item.productoId !== productoId));
   };
+
+  const findProductByCode = (code: string) => {
+    return productos.find((p) => p.codigo.trim() === code.trim());
+  };
+
+  const flashFeedback = (ok: boolean, msg: string) => {
+    setScanFeedback({ ok, msg });
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    feedbackTimerRef.current = setTimeout(() => setScanFeedback(null), 2800);
+  };
+
+  const addScannedProduct = (code: string) => {
+    if (cajaCerrada.cerrado) {
+      setScanError('La caja de hoy ya tiene Cierre Z emitido.');
+      playBeepError();
+      return;
+    }
+
+    setScanError('');
+
+    const product = findProductByCode(code);
+    if (!product) {
+      setScanError(`Producto no encontrado con código "${code}".`);
+      playBeepError();
+      flashFeedback(false, `Código "${code}" no encontrado`);
+      return;
+    }
+
+    addToCart(product);
+    playBeepSuccess();
+    flashFeedback(true, `Agregado: ${product.nombre}`);
+  };
+
+  // Global HID-scanner listener: scanner types code very fast then presses Enter
+  useEffect(() => {
+    if (!scannerEnabled) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const tagName = target?.tagName;
+      const inField =
+        tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || target?.isContentEditable;
+
+      // If user is typing in the barcode box, let it submit on Enter only
+      if (target === scannerRef.current) return;
+
+      // Scanner buffer: capture non-modifier printable keys even when no input focused
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        scanBufferRef.current += e.key;
+        if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
+        scanTimerRef.current = setTimeout(() => {
+          scanBufferRef.current = '';
+        }, 80);
+        return;
+      }
+
+      // Enter completes the scanned code
+      if (e.key === 'Enter' && scanBufferRef.current.length >= 4) {
+        e.preventDefault();
+        const code = scanBufferRef.current;
+        scanBufferRef.current = '';
+        if (inField) return;
+        addScannedProduct(code);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scannerEnabled, productos, cart]);
 
   const updateCartQty = (productoId: string, value: string) => {
     const item = cart.find((i) => i.productoId === productoId);
@@ -314,6 +395,65 @@ export default function PosPage() {
         </div>
       )}
 
+      {/* BARCODE SCANNER BAR */}
+      <div
+        className="card"
+        style={{
+          marginBottom: '1rem',
+          padding: '0.85rem 1rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          border: scanFeedback?.ok ? '2px solid #22c55e' : scanFeedback ? '2px solid #ef4444' : '2px solid var(--primary)',
+        }}
+      >
+        <ScanBarcode size={22} style={{ color: 'var(--primary)', flex: '0 0 auto' }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <label style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem' }}>
+            Lector de Código de Barras
+          </label>
+          <input
+            ref={scannerRef}
+            type="text"
+            className="form-input"
+            style={{ padding: '0.5rem 0.75rem', fontSize: '1.05rem', letterSpacing: '0.05em', fontFamily: 'monospace' }}
+            placeholder="Escanéa el código y presioná Enter para agregar al carrito"
+            value={barcodeInput}
+            onChange={(e) => setBarcodeInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const code = barcodeInput.trim();
+                setBarcodeInput('');
+                if (code) {
+                  addScannedProduct(code);
+                }
+              }
+            }}
+            disabled={cajaCerrada.cerrado}
+            autoComplete="off"
+          />
+          {(scanError || scanFeedback) && (
+            <span style={{ fontSize: '0.78rem', marginTop: '0.2rem', display: 'block', color: scanFeedback?.ok ? '#15803d' : '#b91c1c' }}>
+              {scanError || scanFeedback?.msg}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setScannerEnabled(!scannerEnabled);
+            if (!scannerEnabled) scannerRef.current?.focus();
+          }}
+          className="btn btn-secondary btn-sm"
+          style={{ flex: '0 0 auto', padding: '0.5rem 0.75rem' }}
+          title={scannerEnabled ? 'Apagar escáner global' : 'Encender escáner global'}
+        >
+          {scannerEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          <span>{scannerEnabled ? 'On' : 'Off'}</span>
+        </button>
+      </div>
+
       {loading ? (
         <p style={{ color: 'var(--text-muted)' }}>Cargando caja registradora...</p>
       ) : (
@@ -341,6 +481,17 @@ export default function PosPage() {
                   style={{ opacity: cajaCerrada.cerrado ? 0.55 : 1, cursor: cajaCerrada.cerrado ? 'not-allowed' : 'pointer' }}
                 >
                   <div>
+                    {p.imagenUrl ? (
+                      <img
+                        src={p.imagenUrl}
+                        alt={p.nombre}
+                        style={{ width: '100%', height: '70px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', marginBottom: '0.5rem' }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '70px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                        sin foto
+                      </div>
+                    )}
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
                       {p.categoria}
                     </span>
