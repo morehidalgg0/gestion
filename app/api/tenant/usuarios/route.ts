@@ -56,20 +56,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Suscripción no activa o no encontrada.' }, { status: 403 });
     }
 
-    // 2. Check Plan Limit: Max Users
-    const userCount = await prisma.usuario.count({
-      where: { empresaId },
-    });
-
-    if (userCount >= plan.limiteUsuarios) {
-      return NextResponse.json(
-        {
-          error: `Has superado el límite de usuarios de tu plan (${plan.limiteUsuarios} usuarios). Por favor, actualiza tu plan para agregar más personal.`,
-        },
-        { status: 403 }
-      );
-    }
-
     // Parse input
     const { nombre, email, password, rol } = await req.json();
 

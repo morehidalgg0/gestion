@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, ArrowUpDown, AlertCircle, Trash2, Pencil, ScanBarcode, Loader2 } from 'lucide-react';
+import { Plus, ArrowUpDown, AlertCircle, Trash2, Pencil, ScanBarcode, Loader2, Image as ImageIcon } from 'lucide-react';
 import { playBeepSuccess, playBeepError } from '@/lib/sound';
 
 export default function ProductosPage() {
@@ -43,6 +43,9 @@ export default function ProductosPage() {
   const [editError, setEditError] = useState('');
 
   const [scanBeat, setScanBeat] = useState(0);
+
+  // Image hover preview state
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string; rect: DOMRect } | null>(null);
 
   // Product image upload state (blob URL the client uploaded + local preview)
   const [addImagenUrl, setAddImagenUrl] = useState('');
@@ -441,10 +444,13 @@ export default function ProductosPage() {
                         <img
                           src={prod.imagenUrl}
                           alt={prod.nombre}
-                          style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', display: 'block' }}
+                          style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', display: 'block', cursor: 'pointer', border: '1px solid var(--border-color)' }}
+                          onMouseEnter={(e) => setPreviewImage({ url: prod.imagenUrl, name: prod.nombre, rect: e.currentTarget.getBoundingClientRect() })}
+                          onMouseLeave={() => setPreviewImage(null)}
                         />
                       ) : (
-                        <div style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', flexDirection: 'column', gap: '0.15rem' }}>
+                          <ImageIcon size={14} />
                           sin foto
                         </div>
                       )}
@@ -868,6 +874,53 @@ export default function ProductosPage() {
                 <button type="submit" className="btn btn-primary">Guardar Cambios</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating image preview on hover */}
+      {previewImage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: Math.max(previewImage.rect.top - 10, 10),
+            left: previewImage.rect.right + 12,
+            zIndex: 9999,
+            pointerEvents: 'none',
+            animation: 'fadeIn 0.15s ease-in',
+          }}
+        >
+          <div style={{
+            backgroundColor: 'var(--bg-primary, #fff)',
+            border: '1px solid var(--border-color, #e5e7eb)',
+            borderRadius: 'var(--radius-md, 8px)',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.18)',
+            padding: '0.5rem',
+            maxWidth: '280px',
+          }}>
+            <img
+              src={previewImage.url}
+              alt={previewImage.name}
+              style={{
+                width: '100%',
+                maxHeight: '220px',
+                objectFit: 'contain',
+                borderRadius: 'var(--radius-sm, 4px)',
+                display: 'block',
+              }}
+            />
+            <p style={{
+              margin: '0.4rem 0 0',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              color: 'var(--text-primary, #111)',
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {previewImage.name}
+            </p>
           </div>
         </div>
       )}
