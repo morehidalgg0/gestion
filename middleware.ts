@@ -77,7 +77,8 @@ export async function middleware(req: NextRequest) {
         (pathname === '/api/tenant/password' && req.method === 'PUT') ||
         (pathname === '/api/tenant/productos' && (req.method === 'GET' || req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE')) ||
         (pathname === '/api/tenant/productos/imagen' && req.method === 'POST') ||
-        (pathname === '/api/tenant/clientes' && req.method === 'GET');
+        (pathname === '/api/tenant/clientes' && req.method === 'GET') ||
+        (pathname === '/api/tenant/asistente' && req.method === 'POST');
 
       if (pathname.startsWith('/dashboard') && !canAccessEmployeeDashboard) {
         return NextResponse.redirect(new URL('/dashboard/ventas', req.url));

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import SidebarTenant from '@/components/SidebarTenant';
 import Navbar from '@/components/Navbar';
 import AvisoSuscripcion from '@/components/AvisoSuscripcion';
+import AsistenteChat from '@/components/AsistenteChat';
 import Link from 'next/link';
 
 export default function DashboardLayout({
@@ -73,6 +74,8 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+
+      <AsistenteChat rol={session?.rol} />
     </div>
   );
 }

@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
     "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.110.7",
     "@vercel/blob": "^2.8.0",
