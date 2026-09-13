@@ -14,6 +14,7 @@ model Empresa {
   cuit         String             @unique
   condicionIva String             // 'Responsable Inscripto' o 'Monotributista'
   estado       String             @default("PENDIENTE_PAGO") // 'ACTIVO', 'INACTIVO', 'PENDIENTE_PAGO'
+  mensajeAviso String?            @db.Text // Aviso manual del ROOT que reemplaza al aviso automático de vencimiento
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   usuarios     Usuario[]

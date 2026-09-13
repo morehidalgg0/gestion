@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
                   nombre: dbUser.empresa.nombre,
                   cuit: dbUser.empresa.cuit,
                   estado: dbUser.empresa.estado,
+                  mensajeAviso: dbUser.empresa.mensajeAviso,
                   configAfip: dbUser.empresa.configAfip
                     ? {
                         modo: dbUser.empresa.configAfip.modo,

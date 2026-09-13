@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SidebarTenant from '@/components/SidebarTenant';
 import Navbar from '@/components/Navbar';
+import AvisoSuscripcion from '@/components/AvisoSuscripcion';
 import Link from 'next/link';
 
 export default function DashboardLayout({
@@ -68,6 +69,7 @@ export default function DashboardLayout({
         <Navbar title="Panel de Gestión" />
         
         <main className="container" style={{ flex: 1, overflowY: 'auto' }}>
+          <AvisoSuscripcion empresa={session?.empresa} />
           {children}
         </main>
       </div>
