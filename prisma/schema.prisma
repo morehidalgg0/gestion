@@ -26,6 +26,7 @@ model Empresa {
   cajasDiarias CajaDiaria[]
   cierresCaja  CierreCaja[]
   egresosCaja  EgresoCaja[]
+  sucursales   Sucursal[]
 }
 
 model Usuario {
@@ -33,9 +34,9 @@ model Usuario {
   nombre       String
   email        String    @unique
   passwordHash String
-  rol          String    // 'SUPERADMIN', 'OWNER', 'EMPLOYEE'
+  rol          String    // 'ROOT', 'SUPERADMIN', 'OWNER', 'EMPLOYEE'
   activo       Boolean   @default(true)
-  empresaId    String?   // Nulo si el rol es SUPERADMIN
+  empresaId    String?   // Nulo si el rol es ROOT o SUPERADMIN
   empresa      Empresa?  @relation(fields: [empresaId], references: [id])
   ventas       Venta[]
   cajasDiarias CajaDiaria[]
@@ -51,7 +52,23 @@ model Plan {
   precioMensual         Decimal       @db.Decimal(10, 2)
   limiteVentasMensuales Int           // 0 indica sin límite
   limiteUsuarios        Int           // Cantidad máxima de usuarios admitida
+  limiteSucursales      Int           @default(1) // 0 indica sin límite
   suscripciones         Suscripcion[]
+}
+
+// Sucursales/depósitos de una empresa cliente. Creadas y limitadas desde el
+// panel ROOT según el plan contratado; el propio comercio no puede crearlas.
+model Sucursal {
+  id        String   @id @default(uuid())
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  nombre    String
+  direccion String?
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([empresaId, nombre])
 }
 
 model Suscripcion {

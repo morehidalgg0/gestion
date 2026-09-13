@@ -32,7 +32,9 @@ export default function LoginPage() {
       const user = data.user;
       
       // Role redirection
-      if (user.rol === 'SUPERADMIN') {
+      if (user.rol === 'ROOT') {
+        router.push('/root');
+      } else if (user.rol === 'SUPERADMIN') {
         router.push('/superadmin');
       } else {
         // For merchants, check payment status

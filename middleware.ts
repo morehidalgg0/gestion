@@ -28,9 +28,19 @@ export async function middleware(req: NextRequest) {
   }
 
   // 4. Role Authorization
-  // Superadmin routes require SUPERADMIN role
+  // Root routes: exclusivos del dueño de la plataforma (por encima de SUPERADMIN)
+  if (pathname.startsWith('/root') || pathname.startsWith('/api/root')) {
+    if (session.rol !== 'ROOT') {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Acceso denegado. Se requiere rol Root.' }, { status: 403 });
+      }
+      return NextResponse.redirect(new URL('/login', req.url));
+    }
+  }
+
+  // Superadmin routes require SUPERADMIN role (ROOT también puede acceder)
   if (pathname.startsWith('/superadmin') || pathname.startsWith('/api/superadmin')) {
-    if (session.rol !== 'SUPERADMIN') {
+    if (session.rol !== 'SUPERADMIN' && session.rol !== 'ROOT') {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json({ error: 'Acceso denegado. Se requiere rol de Superadmin.' }, { status: 403 });
       }
@@ -100,7 +110,9 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/superadmin/:path*',
+    '/root/:path*',
     '/api/tenant/:path*',
     '/api/superadmin/:path*',
+    '/api/root/:path*',
   ],
 };

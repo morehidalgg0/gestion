@@ -9,7 +9,7 @@ export interface SessionPayload {
   userId: string;
   nombre: string;
   email: string;
-  rol: 'SUPERADMIN' | 'OWNER' | 'EMPLOYEE';
+  rol: 'ROOT' | 'SUPERADMIN' | 'OWNER' | 'EMPLOYEE';
   empresaId: string | null;
 }
 

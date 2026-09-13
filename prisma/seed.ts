@@ -20,18 +20,21 @@ async function main() {
       precioMensual: 0.0,
       limiteVentasMensuales: 50,
       limiteUsuarios: 2,
+      limiteSucursales: 1,
     },
     {
       nombre: 'Básico',
       precioMensual: 15000.0,
       limiteVentasMensuales: 500,
       limiteUsuarios: 3,
+      limiteSucursales: 1,
     },
     {
       nombre: 'Premium',
       precioMensual: 30000.0,
       limiteVentasMensuales: 0, // 0 = sin límite
       limiteUsuarios: 999, // ilimitado lógicamente
+      limiteSucursales: 0, // 0 = sin límite
     },
   ];
 
@@ -72,6 +75,27 @@ async function main() {
     console.log(`Created superadmin: ${adminEmail} (password: admin123)`);
   } else {
     console.log(`Superadmin already exists.`);
+  }
+
+  // 2b. Create ROOT User (dueña de la plataforma, por encima de SUPERADMIN)
+  const rootEmail = 'root@comerciopro.com';
+  const existingRoot = await prisma.usuario.findUnique({
+    where: { email: rootEmail },
+  });
+
+  if (!existingRoot) {
+    const passwordHash = hashPassword('root123');
+    await prisma.usuario.create({
+      data: {
+        nombre: 'Dueña de la Plataforma',
+        email: rootEmail,
+        passwordHash,
+        rol: 'ROOT',
+      },
+    });
+    console.log(`Created root user: ${rootEmail} (password: root123)`);
+  } else {
+    console.log(`Root user already exists.`);
   }
 
   // 3. Create a Demo Empresa and its Owner User
