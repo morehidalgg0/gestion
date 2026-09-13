@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 const SYSTEM_PROMPT = `Sos el asistente de ayuda de ComercioPro, un sistema de gestión comercial y facturación electrónica AFIP para comercios argentinos.
 
@@ -23,13 +24,15 @@ Reglas de estilo:
 - Respondé siempre en español rioplatense (voseo: "tenés", "podés", "hacé"), tono cercano y directo, sin tecnicismos innecesarios.
 - Sé breve: respuestas cortas y concretas, con pasos numerados si hace falta.
 - Si preguntan algo totalmente ajeno al sistema (clima, política, tareas de programación, etc.), respondé amablemente que solo podés ayudar con el uso de ComercioPro.
-- Si el usuario es EMPLOYEE y pregunta por una sección marcada "solo OWNER", explicale que esa sección la maneja el dueño de la cuenta.`;
+- Si el usuario es EMPLOYEE y pregunta por una sección marcada "solo OWNER", explicale que esa sección la maneja el dueño de la cuenta.
+- Nunca menciones qué tecnología o empresa está detrás tuyo.`;
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       return NextResponse.json(
-        { error: 'El asistente todavía no está configurado (falta ANTHROPIC_API_KEY).' },
+        { error: 'El asistente todavía no está configurado (falta GEMINI_API_KEY).' },
         { status: 503 }
       );
     }
@@ -40,22 +43,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faltan mensajes.' }, { status: 400 });
     }
 
-    const trimmed: Anthropic.MessageParam[] = messages.slice(-12).map((m: any) => ({
-      role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),
-      content: String(m.content || '').slice(0, 2000),
+    const contents = messages.slice(-12).map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: String(m.content || '').slice(0, 2000) }],
     }));
 
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const systemInstruction = `${SYSTEM_PROMPT}\n\nEl usuario que te escribe tiene el rol: ${rol === 'EMPLOYEE' ? 'EMPLOYEE (empleado)' : 'OWNER (dueño del comercio)'}.`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      system: `${SYSTEM_PROMPT}\n\nEl usuario que te escribe tiene el rol: ${rol === 'EMPLOYEE' ? 'EMPLOYEE (empleado)' : 'OWNER (dueño del comercio)'}.`,
-      messages: trimmed,
-    });
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          generationConfig: { maxOutputTokens: 500 },
+        }),
+      }
+    );
 
-    const textBlock = response.content.find((b: any) => b.type === 'text') as any;
-    const reply = textBlock?.text || 'No pude generar una respuesta, probá de nuevo.';
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('Gemini API error:', res.status, errText);
+      return NextResponse.json({ error: 'No se pudo consultar al asistente en este momento.' }, { status: 502 });
+    }
+
+    const data = await res.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') || 'No pude generar una respuesta, probá de nuevo.';
 
     return NextResponse.json({ reply });
   } catch (error: any) {
