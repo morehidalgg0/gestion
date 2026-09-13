@@ -1,11 +1,10 @@
 /**
- * Crea (o reconfirma) el usuario ROOT sin tocar ningún otro dato.
- * Pensado para correr una sola vez contra la base de producción:
- *   DATABASE_URL="postgresql://..." npx ts-node prisma/create-root.ts
+ * Crea el usuario ROOT sin tocar ningún otro dato.
+ * Uso:
+ *   DATABASE_URL="postgresql://..." npx ts-node prisma/create-root.ts <email> <password> ["Nombre"]
  */
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
-import readline from 'readline';
 
 const prisma = new PrismaClient();
 
@@ -15,21 +14,11 @@ function hashPassword(password: string): string {
   return `${salt}:${hash}`;
 }
 
-function ask(question: string): Promise<string> {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question(question, (answer) => {
-    rl.close();
-    resolve(answer);
-  }));
-}
-
 async function main() {
-  const email = (await ask('Email para tu usuario ROOT: ')).trim();
-  const password = (await ask('Contraseña para ese usuario: ')).trim();
-  const nombre = (await ask('Tu nombre (opcional, Enter para "Root"): ')).trim() || 'Root';
+  const [, , email, password, nombre = 'Root'] = process.argv;
 
   if (!email || !password) {
-    throw new Error('Email y contraseña son obligatorios.');
+    throw new Error('Uso: npx ts-node prisma/create-root.ts <email> <password> ["Nombre"]');
   }
 
   const existing = await prisma.usuario.findUnique({ where: { email } });
