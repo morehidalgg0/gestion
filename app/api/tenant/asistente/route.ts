@@ -66,7 +66,10 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const errText = await res.text();
       console.error('Gemini API error:', res.status, errText);
-      return NextResponse.json({ error: 'No se pudo consultar al asistente en este momento.' }, { status: 502 });
+      return NextResponse.json(
+        { error: `Error de Gemini (${res.status}): ${errText.slice(0, 300)}` },
+        { status: 502 }
+      );
     }
 
     const data = await res.json();
@@ -75,6 +78,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reply });
   } catch (error: any) {
     console.error('Asistente error:', error);
-    return NextResponse.json({ error: 'No se pudo consultar al asistente en este momento.' }, { status: 500 });
+    return NextResponse.json({ error: `Error interno: ${error.message || error}` }, { status: 500 });
   }
 }
