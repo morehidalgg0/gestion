@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 
 const SYSTEM_PROMPT = `Sos el asistente de ayuda de ComercioPro, un sistema de gestión comercial y facturación electrónica AFIP para comercios argentinos.
 
