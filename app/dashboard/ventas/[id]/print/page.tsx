@@ -32,7 +32,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
 
   useEffect(() => {
     if (!venta?.qrUrl) return;
-    QRCode.toDataURL(venta.qrUrl, { margin: 0, width: 160 })
+    QRCode.toDataURL(venta.qrUrl, { margin: 0, width: 320 })
       .then(setQrDataUrl)
       .catch((err) => console.error('Error generando QR AFIP:', err));
   }, [venta?.qrUrl]);
@@ -316,7 +316,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             </div>
             {qrDataUrl && (
               <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                <img src={qrDataUrl} alt="QR AFIP" width={90} height={90} style={{ display: 'inline-block' }} />
+                <img src={qrDataUrl} alt="QR AFIP" style={{ display: 'inline-block', width: '32mm', height: '32mm' }} />
               </div>
             )}
           </div>
@@ -387,8 +387,12 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             <br />
             Vto CAE: {new Date(venta.caeVencimiento).toLocaleDateString('es-AR')}
             {qrDataUrl && (
-              <div style={{ textAlign: 'center', marginTop: '2mm' }}>
-                <img src={qrDataUrl} alt="QR AFIP" width={70} height={70} style={{ display: 'inline-block' }} />
+              <div style={{ textAlign: 'center', marginTop: '1mm' }}>
+                <img
+                  src={qrDataUrl}
+                  alt="QR AFIP"
+                  style={{ display: 'inline-block', width: '32mm', height: '32mm' }}
+                />
               </div>
             )}
           </div>
