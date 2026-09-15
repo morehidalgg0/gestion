@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Parse input
-    const { clienteId, formaPago, items, tipoComprobante: manualTipoComprobante, datosFacturacion } = await req.json();
+    const { clienteId, formaPago, items, tipoComprobante: manualTipoComprobante, datosFacturacion, descuentoTicket } = await req.json();
 
     if (!clienteId || !formaPago || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ error: 'Faltan campos obligatorios para registrar la venta.' }, { status: 400 });
@@ -207,10 +207,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Algunos productos del carrito no existen en su stock.' }, { status: 400 });
     }
 
-    // Validate quantities, compute subtotal and IVA
-    let totalVenta = 0;
-    const invoiceItems: any[] = [];
+    // Validate quantities, apply per-item discounts, compute gross totals
     const dbProductsMap = new Map(dbProducts.map((p) => [p.id, p]));
+    const rawItems: {
+      productoId: string;
+      nombre: string;
+      cantidad: number;
+      ivaPorcentaje: number;
+      grossItemTotal: number; // Antes de cualquier descuento
+      afterItemDiscount: number; // Después del descuento por ítem, antes del descuento de ticket
+    }[] = [];
 
     for (const item of items) {
       const prod = dbProductsMap.get(item.productoId);
@@ -230,18 +236,69 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const precioUnitario = prod.unidad === 'g' ? prod.precioVenta.toNumber() / 1000 : prod.precioVenta.toNumber();
-      const itemSubtotal = qty * precioUnitario;
-      totalVenta += itemSubtotal;
+      const catalogPrecioUnitario = prod.unidad === 'g' ? prod.precioVenta.toNumber() / 1000 : prod.precioVenta.toNumber();
+      const grossItemTotal = qty * catalogPrecioUnitario;
 
-      invoiceItems.push({
+      const itemDescuentoPct = Math.min(100, Math.max(0, parseFloat(item.descuentoPorcentaje) || 0));
+      const afterItemDiscount = grossItemTotal * (1 - itemDescuentoPct / 100);
+
+      rawItems.push({
         productoId: prod.id,
         nombre: prod.nombre,
         cantidad: qty,
-        precioUnitario,
         ivaPorcentaje: prod.ivaPorcentaje.toNumber(),
+        grossItemTotal,
+        afterItemDiscount,
       });
     }
+
+    const grossTotal = rawItems.reduce((acc, i) => acc + i.grossItemTotal, 0);
+    const subtotalPreTicket = rawItems.reduce((acc, i) => acc + i.afterItemDiscount, 0);
+
+    // Descuento adicional sobre el total del ticket (% o monto fijo)
+    let ticketDiscountAmount = 0;
+    if (descuentoTicket?.tipo === 'PORCENTAJE') {
+      const pct = Math.min(100, Math.max(0, parseFloat(descuentoTicket.valor) || 0));
+      ticketDiscountAmount = subtotalPreTicket * (pct / 100);
+    } else if (descuentoTicket?.tipo === 'MONTO') {
+      const monto = Math.max(0, parseFloat(descuentoTicket.valor) || 0);
+      ticketDiscountAmount = Math.min(monto, subtotalPreTicket);
+    }
+
+    // Distribuir el descuento de ticket proporcionalmente entre los ítems, para
+    // que la suma de los ítems (que es lo que se manda a AFIP) cierre exacto
+    // con el total final. El último ítem absorbe el resto del redondeo.
+    let totalVenta = 0;
+    const invoiceItems: any[] = [];
+    rawItems.forEach((item, idx) => {
+      const share = subtotalPreTicket > 0 ? item.afterItemDiscount / subtotalPreTicket : 0;
+      let finalItemTotal = item.afterItemDiscount - ticketDiscountAmount * share;
+      finalItemTotal = Math.round(finalItemTotal * 100) / 100;
+
+      if (idx === rawItems.length - 1) {
+        // Ajuste de redondeo: que la suma final cierre exacto con el total objetivo.
+        const targetTotal = Math.round((subtotalPreTicket - ticketDiscountAmount) * 100) / 100;
+        const sumSoFar = invoiceItems.reduce((acc, i) => acc + i.cantidad * i.precioUnitario, 0);
+        finalItemTotal = Math.round((targetTotal - sumSoFar) * 100) / 100;
+      }
+
+      const finalPrecioUnitario = finalItemTotal / item.cantidad;
+      const descuentoPorcentaje = item.grossItemTotal > 0
+        ? Math.round((1 - finalItemTotal / item.grossItemTotal) * 10000) / 100
+        : 0;
+
+      totalVenta += finalItemTotal;
+      invoiceItems.push({
+        productoId: item.productoId,
+        nombre: item.nombre,
+        cantidad: item.cantidad,
+        precioUnitario: finalPrecioUnitario,
+        ivaPorcentaje: item.ivaPorcentaje,
+        descuentoPorcentaje,
+      });
+    });
+
+    const descuentoTotalMonto = Math.max(0, Math.round((grossTotal - totalVenta) * 100) / 100);
 
     // 5. Check Credit Limit for Cuenta Corriente
     if (formaPago === 'Cuenta Corriente') {
@@ -330,6 +387,7 @@ export async function POST(req: NextRequest) {
           subtotal: totalVenta * 0.826, // dummy tax ratio
           iva: totalVenta * 0.174,
           total: totalVenta,
+          descuentoTotal: descuentoTotalMonto,
           formaPago,
           estado: 'RECHAZADO_AFIP',
           mensajeAfip: afipResult.mensajeAfip,
@@ -401,6 +459,7 @@ export async function POST(req: NextRequest) {
           subtotal: taxSubtotal,
           iva: taxIva,
           total: totalVenta,
+          descuentoTotal: descuentoTotalMonto,
           formaPago,
           estado: afipResult.estado,
           cae: afipResult.cae,
@@ -413,6 +472,7 @@ export async function POST(req: NextRequest) {
               cantidad: i.cantidad,
               precioUnitario: i.precioUnitario,
               subtotal: i.cantidad * i.precioUnitario,
+              descuentoPorcentaje: i.descuentoPorcentaje > 0 ? i.descuentoPorcentaje : null,
             })),
           },
         },

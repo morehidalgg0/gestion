@@ -243,7 +243,12 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
           {/* Table Items */}
           {items.map((item: any) => (
             <div key={item.id} className="receipt-item-row" style={{ display: 'flex', marginBottom: '0.4rem' }}>
-              <div className="receipt-item-desc" style={{ flex: '2', wordBreak: 'break-word' }}>{item.productoName}</div>
+              <div className="receipt-item-desc" style={{ flex: '2', wordBreak: 'break-word' }}>
+                {item.productoName}
+                {item.descuentoPorcentaje > 0 && (
+                  <span style={{ fontSize: '0.65rem', fontWeight: 'bold' }}> ({parseFloat(item.descuentoPorcentaje).toFixed(0)}% OFF)</span>
+                )}
+              </div>
               <div style={{ flex: '1', textAlign: 'right' }}>
                 {parseFloat(item.cantidad).toFixed(item.productoName.toLowerCase().includes('peso') || item.productoName.toLowerCase().includes('kg') ? 3 : 2)}
               </div>
@@ -274,6 +279,13 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
                 <span>IVA Discriminado:</span>
                 <span>${parseFloat(venta.iva).toFixed(2)}</span>
               </div>
+            </div>
+          )}
+
+          {parseFloat(venta.descuentoTotal) > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+              <span>Descuento:</span>
+              <span>-${parseFloat(venta.descuentoTotal).toFixed(2)}</span>
             </div>
           )}
 
@@ -352,7 +364,10 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
         <div style={{ borderTop: '1px dashed #000', paddingTop: '2mm' }}>
           {items.map((item: any) => (
             <div key={item.id} style={{ marginBottom: '2mm', breakInside: 'avoid' }}>
-              <div style={{ fontWeight: 700, overflowWrap: 'break-word' }}>{item.productoName}</div>
+              <div style={{ fontWeight: 700, overflowWrap: 'break-word' }}>
+                {item.productoName}
+                {item.descuentoPorcentaje > 0 && ` (${Number(item.descuentoPorcentaje).toFixed(0)}% OFF)`}
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2mm' }}>
                 <span>{Number(item.cantidad).toLocaleString('es-AR')} x ${Number(item.precioUnitario).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
                 <strong>${Number(item.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
@@ -373,6 +388,12 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
                 <span>${Number(venta.iva).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
               </div>
             </>
+          )}
+          {Number(venta.descuentoTotal) > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Descuento</span>
+              <span>-${Number(venta.descuentoTotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '17px', marginTop: '1mm' }}>
             <span>TOTAL</span>

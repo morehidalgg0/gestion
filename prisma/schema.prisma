@@ -192,6 +192,7 @@ model Venta {
   subtotal          Decimal                    @db.Decimal(10, 2)
   iva               Decimal                    @db.Decimal(10, 2)
   total             Decimal                    @db.Decimal(10, 2)
+  descuentoTotal    Decimal                    @default(0) @db.Decimal(10, 2) // Monto total descontado (ítems + ticket), informativo
   formaPago         String                     // 'Efectivo', 'Tarjeta', 'Transferencia', 'Cuenta Corriente'
   estado            String                     // 'COMPLETADO', 'RECHAZADO_AFIP', 'DEMO'
   cae               String?
@@ -277,8 +278,9 @@ model VentaItem {
   producto       Producto @relation(fields: [productoId], references: [id])
   productoName   String   // Copia de seguridad del nombre al momento de la venta
   cantidad       Decimal  @db.Decimal(10, 3)
-  precioUnitario Decimal  @db.Decimal(10, 2)
+  precioUnitario Decimal  @db.Decimal(10, 2) // Precio final ya con descuentos aplicados
   subtotal       Decimal  @db.Decimal(10, 2)
+  descuentoPorcentaje Decimal? @db.Decimal(5, 2) // % de descuento efectivo aplicado a esta línea (informativo)
 }
 
 model MovimientoCuentaCorriente {

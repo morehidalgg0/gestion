@@ -17,6 +17,8 @@ export default function PosPage() {
   const [cart, setCart] = useState<any[]>([]);
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [formaPago, setFormaPago] = useState('Efectivo');
+  const [descuentoTicketTipo, setDescuentoTicketTipo] = useState<'NINGUNO' | 'PORCENTAJE' | 'MONTO'>('NINGUNO');
+  const [descuentoTicketValor, setDescuentoTicketValor] = useState('');
   const [tipoComprobanteSeleccionado, setTipoComprobanteSeleccionado] = useState('auto');
   const [facturacionTipoDoc, setFacturacionTipoDoc] = useState('CUIT');
   const [facturacionNroDoc, setFacturacionNroDoc] = useState('');
@@ -255,6 +257,16 @@ export default function PosPage() {
     }
   };
 
+  const updateCartDescuento = (productoId: string, value: string) => {
+    let pct = parseFloat(value);
+    if (isNaN(pct)) pct = 0;
+    pct = Math.min(100, Math.max(0, pct));
+
+    setCart(
+      cart.map((i) => (i.productoId === productoId ? { ...i, descuentoPorcentaje: pct } : i))
+    );
+  };
+
   // Calculators
   const calculateCartTotals = () => {
     let total = 0;
@@ -265,28 +277,46 @@ export default function PosPage() {
     let exento = 0;
 
     cart.forEach((item) => {
-      total += item.subtotal;
-      
+      const itemNeto = item.subtotal * (1 - (item.descuentoPorcentaje || 0) / 100);
+      total += itemNeto;
+
       if (item.ivaPorcentaje === 21.0) {
-        const net = item.subtotal / 1.21;
+        const net = itemNeto / 1.21;
         net21 += net;
-        iva21 += item.subtotal - net;
+        iva21 += itemNeto - net;
       } else if (item.ivaPorcentaje === 10.5) {
-        const net = item.subtotal / 1.105;
+        const net = itemNeto / 1.105;
         net105 += net;
-        iva105 += item.subtotal - net;
+        iva105 += itemNeto - net;
       } else {
-        exento += item.subtotal;
+        exento += itemNeto;
       }
     });
 
-    const subtotal = net21 + net105 + exento;
-    const iva = iva21 + iva105;
+    const subtotalPreTicket = total;
+
+    let descuentoTicket = 0;
+    if (descuentoTicketTipo === 'PORCENTAJE') {
+      const pct = Math.min(100, Math.max(0, parseFloat(descuentoTicketValor) || 0));
+      descuentoTicket = subtotalPreTicket * (pct / 100);
+    } else if (descuentoTicketTipo === 'MONTO') {
+      const monto = Math.max(0, parseFloat(descuentoTicketValor) || 0);
+      descuentoTicket = Math.min(monto, subtotalPreTicket);
+    }
+
+    // El IVA se muestra proporcional (aproximado); el cálculo exacto para la
+    // factura lo hace el servidor al confirmar la venta.
+    const ratio = subtotalPreTicket > 0 ? (subtotalPreTicket - descuentoTicket) / subtotalPreTicket : 1;
+    const subtotal = (net21 + net105 + exento) * ratio;
+    const iva = (iva21 + iva105) * ratio;
+    const finalTotal = subtotalPreTicket - descuentoTicket;
+    const grossTotal = cart.reduce((acc, item) => acc + item.subtotal, 0);
 
     return {
       subtotal,
       iva,
-      total,
+      total: finalTotal,
+      descuentoTotal: grossTotal - finalTotal,
       ivaDetail: {
         iva21,
         iva105,
@@ -353,7 +383,12 @@ export default function PosPage() {
           items: cart.map((item) => ({
             productoId: item.productoId,
             cantidad: item.cantidad,
+            descuentoPorcentaje: item.descuentoPorcentaje || 0,
           })),
+          descuentoTicket: descuentoTicketTipo === 'NINGUNO' ? undefined : {
+            tipo: descuentoTicketTipo,
+            valor: parseFloat(descuentoTicketValor) || 0,
+          },
         }),
       });
 
@@ -365,6 +400,8 @@ export default function PosPage() {
 
       setSuccessResult(data.venta);
       setCart([]); // Clear cart
+      setDescuentoTicketTipo('NINGUNO');
+      setDescuentoTicketValor('');
       loadData();  // Reload stock in screen
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -562,9 +599,31 @@ export default function PosPage() {
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem' }}>
                       {getCartPriceHint(item)}
                     </span>
-                    <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: 900, display: 'block', marginTop: '0.35rem' }}>
-                      ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: 900 }}>
+                        ${(item.subtotal * (1 - (item.descuentoPorcentaje || 0) / 100)).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                      {item.descuentoPorcentaje > 0 && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                          ${item.subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                        </span>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          className="form-input"
+                          placeholder="0"
+                          value={item.descuentoPorcentaje || ''}
+                          onChange={(e) => updateCartDescuento(item.productoId, e.target.value)}
+                          disabled={cajaCerrada.cerrado}
+                          style={{ width: '56px', padding: '0.25rem 0.4rem', fontSize: '0.75rem', textAlign: 'center' }}
+                        />
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>% off</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.5rem' }}>
@@ -702,6 +761,37 @@ export default function PosPage() {
                 </div>
               )}
 
+              {/* Descuento sobre el total del ticket */}
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label className="form-label" style={{ fontSize: '0.8rem' }}>Descuento sobre el total</label>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <select
+                    className="form-select"
+                    style={{ padding: '0.5rem 0.6rem', fontSize: '0.85rem', flex: '1 1 auto' }}
+                    value={descuentoTicketTipo}
+                    onChange={(e) => setDescuentoTicketTipo(e.target.value as any)}
+                    disabled={cajaCerrada.cerrado}
+                  >
+                    <option value="NINGUNO">Sin descuento</option>
+                    <option value="PORCENTAJE">% Porcentaje</option>
+                    <option value="MONTO">$ Monto fijo</option>
+                  </select>
+                  {descuentoTicketTipo !== 'NINGUNO' && (
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="form-input"
+                      placeholder={descuentoTicketTipo === 'PORCENTAJE' ? '%' : '$'}
+                      value={descuentoTicketValor}
+                      onChange={(e) => setDescuentoTicketValor(e.target.value)}
+                      disabled={cajaCerrada.cerrado}
+                      style={{ width: '90px', padding: '0.5rem 0.6rem', fontSize: '0.85rem' }}
+                    />
+                  )}
+                </div>
+              </div>
+
               {/* Tax totals */}
               <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -712,6 +802,12 @@ export default function PosPage() {
                   <span>IVA Acumulado:</span>
                   <span>${totals.iva.toFixed(2)}</span>
                 </div>
+                {totals.descuentoTotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#15803d', fontWeight: 700 }}>
+                    <span>Descuento total:</span>
+                    <span>-${totals.descuentoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
               </div>
 
               {/* Final total */}
