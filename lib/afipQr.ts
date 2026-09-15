@@ -48,7 +48,13 @@ function toYyyyMmDd(fecha: string | Date): string {
   return arDateFormatter.format(new Date(fecha)); // en-CA ya formatea como YYYY-MM-DD
 }
 
-export function buildAfipQrUrl(params: AfipQrParams): string {
+export function buildAfipQrUrl(params: AfipQrParams): string | null {
+  const codAut = parseInt(params.cae, 10);
+  // El CAE de un comprobante real de AFIP es siempre numérico. Si no lo es
+  // (ej. un CAE simulado de modo demo tipo "DEMO482910573921"), no armamos
+  // un QR inválido: mejor no mostrar ninguno.
+  if (!Number.isFinite(codAut)) return null;
+
   const payload = {
     ver: 1,
     fecha: toYyyyMmDd(params.fecha),
@@ -62,7 +68,7 @@ export function buildAfipQrUrl(params: AfipQrParams): string {
     tipoDocRec: TIPO_DOC_REC[params.tipoDocReceptor] ?? 99,
     nroDocRec: parseInt(String(params.nroDocReceptor).replace(/\D/g, ''), 10) || 0,
     tipoCodAut: 'E',
-    codAut: parseInt(params.cae, 10),
+    codAut,
   };
 
   const base64 = Buffer.from(JSON.stringify(payload)).toString('base64');

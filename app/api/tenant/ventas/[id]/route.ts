@@ -40,7 +40,10 @@ export async function GET(
 
     let qrUrl: string | null = null;
     const tipoCmpCodigo = getTipoComprobanteCodigo(venta.tipoComprobante);
-    if (venta.cae && tipoCmpCodigo !== null) {
+    // El QR solo tiene sentido para comprobantes con CAE real de AFIP: en modo
+    // demo el CAE es un texto simulado (ej. "DEMO482910573921"), no un
+    // comprobante autorizado de verdad.
+    if (venta.estado !== 'DEMO' && venta.cae && tipoCmpCodigo !== null) {
       qrUrl = buildAfipQrUrl({
         fecha: venta.createdAt,
         cuitEmisor: venta.empresa.configAfip?.cuit || venta.empresa.cuit,
