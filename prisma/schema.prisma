@@ -28,6 +28,7 @@ model Empresa {
   cierresCaja  CierreCaja[]
   egresosCaja  EgresoCaja[]
   sucursales   Sucursal[]
+  pagos        Pago[]
 }
 
 model Usuario {
@@ -70,6 +71,22 @@ model Sucursal {
   updatedAt DateTime @updatedAt
 
   @@unique([empresaId, nombre])
+}
+
+// Historial de pagos cargado manualmente por el ROOT (cuota mensual pagada
+// en efectivo, transferencia, Mercado Pago, etc.). No depende del webhook
+// automático de Mercado Pago.
+model Pago {
+  id        String   @id @default(uuid())
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  monto     Decimal  @db.Decimal(10, 2)
+  medioPago String   // 'Efectivo', 'Transferencia', 'Mercado Pago', 'Otro'
+  concepto  String?  // Ej: "Cuota Septiembre 2026"
+  fecha     DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([empresaId, fecha])
 }
 
 model Suscripcion {

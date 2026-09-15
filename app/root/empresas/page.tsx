@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, MapPin, Plus, Trash2, Power, Settings, MessageSquare } from 'lucide-react';
+import { Building2, MapPin, Plus, Trash2, Power, Settings, MessageSquare, UserPlus, Receipt } from 'lucide-react';
 
 function diasParaVencer(vencimiento?: string | null): number | null {
   if (!vencimiento) return null;
@@ -27,6 +27,27 @@ export default function RootEmpresasPage() {
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevaDireccion, setNuevaDireccion] = useState('');
   const [creatingSucursal, setCreatingSucursal] = useState(false);
+
+  // Pagos
+  const [pagoMonto, setPagoMonto] = useState('');
+  const [pagoMedio, setPagoMedio] = useState('Efectivo');
+  const [pagoConcepto, setPagoConcepto] = useState('');
+  const [pagoFecha, setPagoFecha] = useState('');
+  const [creatingPago, setCreatingPago] = useState(false);
+
+  // Afiliar comercio nuevo
+  const [showAfiliarModal, setShowAfiliarModal] = useState(false);
+  const [afNombre, setAfNombre] = useState('');
+  const [afCuit, setAfCuit] = useState('');
+  const [afCondicionIva, setAfCondicionIva] = useState('Responsable Inscripto');
+  const [afPlanId, setAfPlanId] = useState('');
+  const [afVencimiento, setAfVencimiento] = useState('');
+  const [afEstado, setAfEstado] = useState('ACTIVO');
+  const [afOwnerNombre, setAfOwnerNombre] = useState('');
+  const [afOwnerEmail, setAfOwnerEmail] = useState('');
+  const [afOwnerPassword, setAfOwnerPassword] = useState('');
+  const [afiliando, setAfiliando] = useState(false);
+  const [afError, setAfError] = useState('');
 
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -153,13 +174,106 @@ export default function RootEmpresasPage() {
     await refreshSelected();
   };
 
+  const handleRegistrarPago = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEmpresa) return;
+    setCreatingPago(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch('/api/root/pagos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          empresaId: selectedEmpresa.id,
+          monto: pagoMonto,
+          medioPago: pagoMedio,
+          concepto: pagoConcepto,
+          fecha: pagoFecha ? new Date(pagoFecha).toISOString() : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo registrar el pago.');
+
+      setPagoMonto('');
+      setPagoConcepto('');
+      setPagoFecha('');
+      await refreshSelected();
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setCreatingPago(false);
+    }
+  };
+
+  const handleDeletePago = async (pagoId: string) => {
+    if (!confirm('¿Eliminar este pago del historial?')) return;
+    await fetch(`/api/root/pagos?id=${pagoId}`, { method: 'DELETE' });
+    await refreshSelected();
+  };
+
+  const openAfiliarModal = () => {
+    setAfNombre('');
+    setAfCuit('');
+    setAfCondicionIva('Responsable Inscripto');
+    setAfPlanId('');
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    setAfVencimiento(date.toISOString().split('T')[0]);
+    setAfEstado('ACTIVO');
+    setAfOwnerNombre('');
+    setAfOwnerEmail('');
+    setAfOwnerPassword('');
+    setAfError('');
+    setShowAfiliarModal(true);
+  };
+
+  const handleAfiliar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAfiliando(true);
+    setAfError('');
+
+    try {
+      const res = await fetch('/api/root/empresas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: afNombre,
+          cuit: afCuit,
+          condicionIva: afCondicionIva,
+          planId: afPlanId,
+          fechaVencimiento: afVencimiento ? new Date(afVencimiento).toISOString() : undefined,
+          estado: afEstado,
+          ownerNombre: afOwnerNombre,
+          ownerEmail: afOwnerEmail,
+          ownerPassword: afOwnerPassword,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo afiliar el comercio.');
+
+      setShowAfiliarModal(false);
+      await loadData();
+    } catch (err: any) {
+      setAfError(err.message);
+    } finally {
+      setAfiliando(false);
+    }
+  };
+
   return (
     <div>
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>Empresas Clientes</h2>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Tus cuentas comerciales activas: suscripción, vencimiento, aviso de pago y sucursales, todo en un solo lugar.
-        </p>
+      <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+        <div>
+          <h2 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>Empresas Clientes</h2>
+          <p style={{ color: 'var(--text-muted)' }}>
+            Tus cuentas comerciales activas: suscripción, pagos, aviso y sucursales, todo en un solo lugar.
+          </p>
+        </div>
+        <button onClick={openAfiliarModal} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
+          <UserPlus size={16} />
+          <span>Afiliar Comercio</span>
+        </button>
       </div>
 
       {loading ? (
@@ -311,6 +425,98 @@ export default function RootEmpresasPage() {
                 </button>
               </form>
 
+              {/* --- Historial de pagos --- */}
+              <h4 style={{ marginBottom: '0.75rem' }}>
+                <Receipt size={16} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />
+                Historial de Pagos
+              </h4>
+
+              {selectedEmpresa.pagos?.length > 0 ? (
+                <div style={{ marginBottom: '1rem' }}>
+                  {selectedEmpresa.pagos.map((pago: any) => (
+                    <div
+                      key={pago.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.55rem 0.8rem',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: 'var(--bg-secondary)',
+                        marginBottom: '0.4rem',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      <div>
+                        <span style={{ fontWeight: 600 }}>${parseFloat(pago.monto).toLocaleString('es-AR')}</span>
+                        {' · '}{pago.medioPago}
+                        {' · '}{new Date(pago.fecha).toLocaleDateString('es-AR')}
+                        {pago.concepto && <div style={{ color: 'var(--text-muted)' }}>{pago.concepto}</div>}
+                      </div>
+                      <button
+                        onClick={() => handleDeletePago(pago.id)}
+                        className="btn btn-danger btn-sm"
+                        title="Eliminar pago"
+                        style={{ padding: '0.3rem 0.5rem' }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Mostrando los últimos 5 pagos.</p>
+                </div>
+              ) : (
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Todavía no registraste ningún pago.</p>
+              )}
+
+              <form onSubmit={handleRegistrarPago} style={{ marginBottom: '2rem' }}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Monto ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="form-input"
+                      value={pagoMonto}
+                      onChange={(e) => setPagoMonto(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Medio de Pago</label>
+                    <select className="form-select" value={pagoMedio} onChange={(e) => setPagoMedio(e.target.value)}>
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Transferencia">Transferencia</option>
+                      <option value="Mercado Pago">Mercado Pago</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Fecha (opcional)</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={pagoFecha}
+                      onChange={(e) => setPagoFecha(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Concepto (opcional)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder='Ej: "Cuota Septiembre 2026"'
+                    value={pagoConcepto}
+                    onChange={(e) => setPagoConcepto(e.target.value)}
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary" disabled={creatingPago}>
+                  {creatingPago ? 'Registrando...' : 'Registrar Pago'}
+                </button>
+              </form>
+
               {/* --- Sucursales --- */}
               <h4 style={{ marginBottom: '0.75rem' }}>
                 <MapPin size={16} style={{ verticalAlign: 'middle', marginRight: '0.3rem' }} />
@@ -411,6 +617,99 @@ export default function RootEmpresasPage() {
             <div className="modal-footer">
               <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary">Cerrar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showAfiliarModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header" style={{ backgroundColor: '#ede9fe' }}>
+              <h3 style={{ color: '#5b21b6' }}>
+                <UserPlus size={18} style={{ verticalAlign: 'middle', marginRight: '0.4rem' }} />
+                Afiliar Comercio Nuevo
+              </h3>
+              <button onClick={() => setShowAfiliarModal(false)} className="btn btn-secondary btn-sm" style={{ padding: '0.25rem 0.5rem' }}>✕</button>
+            </div>
+            <form onSubmit={handleAfiliar}>
+              <div className="modal-body">
+                {afError && (
+                  <div style={{ padding: '0.75rem', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                    ⚠️ {afError}
+                  </div>
+                )}
+
+                <h4 style={{ marginBottom: '0.6rem' }}>Datos del Comercio</h4>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Nombre / Razón Social</label>
+                    <input type="text" className="form-input" value={afNombre} onChange={(e) => setAfNombre(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">CUIT (11 dígitos)</label>
+                    <input type="text" className="form-input" value={afCuit} onChange={(e) => setAfCuit(e.target.value)} required />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Condición frente al IVA</label>
+                  <select className="form-select" value={afCondicionIva} onChange={(e) => setAfCondicionIva(e.target.value)}>
+                    <option value="Responsable Inscripto">Responsable Inscripto</option>
+                    <option value="Monotributista">Monotributista</option>
+                  </select>
+                </div>
+
+                <h4 style={{ margin: '1.25rem 0 0.6rem' }}>Suscripción</h4>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Estado</label>
+                    <select className="form-select" value={afEstado} onChange={(e) => setAfEstado(e.target.value)}>
+                      <option value="ACTIVO">ACTIVO (Acceso Total)</option>
+                      <option value="PENDIENTE_PAGO">PENDIENTE PAGO</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Plan</label>
+                    <select className="form-select" value={afPlanId} onChange={(e) => setAfPlanId(e.target.value)} required>
+                      <option value="">-- Seleccionar Plan --</option>
+                      {planes.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          Plan {p.nombre} (${parseFloat(p.precioMensual).toLocaleString('es-AR')}/mes)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Vencimiento</label>
+                    <input type="date" className="form-input" value={afVencimiento} onChange={(e) => setAfVencimiento(e.target.value)} required />
+                  </div>
+                </div>
+
+                <h4 style={{ margin: '1.25rem 0 0.6rem' }}>Usuario Dueño (OWNER)</h4>
+                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+                  Con este email y contraseña va a entrar el dueño del comercio a su panel.
+                </p>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Nombre</label>
+                    <input type="text" className="form-input" value={afOwnerNombre} onChange={(e) => setAfOwnerNombre(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input type="email" className="form-input" value={afOwnerEmail} onChange={(e) => setAfOwnerEmail(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Contraseña</label>
+                    <input type="text" className="form-input" minLength={6} value={afOwnerPassword} onChange={(e) => setAfOwnerPassword(e.target.value)} required />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" onClick={() => setShowAfiliarModal(false)} className="btn btn-secondary" disabled={afiliando}>Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={afiliando}>
+                  {afiliando ? 'Afiliando...' : 'Afiliar Comercio'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
