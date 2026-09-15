@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import { Printer, X } from 'lucide-react';
+import QRCode from 'qrcode';
 
 export default function PrintPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -9,6 +10,7 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [paperWidthMm, setPaperWidthMm] = useState(80);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchVenta = async () => {
@@ -29,14 +31,22 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
   }, [id]);
 
   useEffect(() => {
+    if (!venta?.qrUrl) return;
+    QRCode.toDataURL(venta.qrUrl, { margin: 0, width: 160 })
+      .then(setQrDataUrl)
+      .catch((err) => console.error('Error generando QR AFIP:', err));
+  }, [venta?.qrUrl]);
+
+  useEffect(() => {
     if (!venta || loading || error) return;
+    if (venta.qrUrl && !qrDataUrl) return; // Esperar a que el QR esté listo antes de imprimir
 
     const timeout = window.setTimeout(() => {
       window.print();
     }, 350);
 
     return () => window.clearTimeout(timeout);
-  }, [venta, loading, error]);
+  }, [venta, loading, error, qrDataUrl]);
 
   if (loading) {
     return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando comprobante...</div>;
@@ -304,6 +314,11 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             <div style={{ textAlign: 'center', marginTop: '0.5rem', fontWeight: 'bold', fontSize: '0.65rem' }}>
               Comprobante autorizado por AFIP
             </div>
+            {qrDataUrl && (
+              <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                <img src={qrDataUrl} alt="QR AFIP" width={90} height={90} style={{ display: 'inline-block' }} />
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -371,6 +386,11 @@ export default function PrintPage({ params }: { params: Promise<{ id: string }> 
             CAE: {venta.cae}
             <br />
             Vto CAE: {new Date(venta.caeVencimiento).toLocaleDateString('es-AR')}
+            {qrDataUrl && (
+              <div style={{ textAlign: 'center', marginTop: '2mm' }}>
+                <img src={qrDataUrl} alt="QR AFIP" width={70} height={70} style={{ display: 'inline-block' }} />
+              </div>
+            )}
           </div>
         )}
       </div>
