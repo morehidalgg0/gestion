@@ -13,7 +13,7 @@ function formatMoney(value: number) {
 
 // Category color mapping
 const CATEGORY_COLORS: Record<string, string> = {
-  'Costo de mercadería': '#2563eb',
+  'Costo de mercadería': '#4338ca',
   'Sueldos': '#8b5cf6',
   'Alquiler': '#ef4444',
   'Servicios': '#f59e0b',
@@ -174,12 +174,12 @@ export default function RentabilidadPage() {
             </div>
 
             <div className="card stat-card">
-              <div className="stat-icon" style={{ backgroundColor: '#eff6ff', color: '#2563eb' }}>
+              <div className="stat-icon" style={{ backgroundColor: '#eeedfe', color: '#4338ca' }}>
                 <Percent size={24} />
               </div>
               <div className="stat-info">
                 <span className="stat-label">Margen de ganancia</span>
-                <span className="stat-value" style={{ color: isPositive ? '#2563eb' : '#b91c1c' }}>
+                <span className="stat-value" style={{ color: isPositive ? '#4338ca' : '#b91c1c' }}>
                   {(data?.margen ?? 0).toFixed(1)}%
                 </span>
                 <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>

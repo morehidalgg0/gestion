@@ -79,7 +79,7 @@ export default function SidebarTenant() {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        ◼ ComercioPro
+        ◼ Kontia
       </div>
 
       <nav className="sidebar-nav">

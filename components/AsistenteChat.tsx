@@ -7,7 +7,7 @@ type Msg = { role: 'user' | 'assistant'; content: string };
 
 const SALUDO: Msg = {
   role: 'assistant',
-  content: 'Hola 👋 Soy el asistente de ComercioPro. Preguntame cómo usar cualquier parte del sistema (cargar un producto, hacer una venta, cerrar la caja, etc.).',
+  content: 'Hola 👋 Soy el asistente de Kontia. Preguntame cómo usar cualquier parte del sistema (cargar un producto, hacer una venta, cerrar la caja, etc.).',
 };
 
 export default function AsistenteChat({ rol }: { rol?: string }) {
@@ -71,7 +71,7 @@ export default function AsistenteChat({ rol }: { rol?: string }) {
           <div
             style={{
               padding: '0.75rem 1rem',
-              backgroundColor: 'var(--primary, #4f46e5)',
+              backgroundColor: 'var(--primary, #4338ca)',
               color: '#fff',
               display: 'flex',
               alignItems: 'center',
@@ -80,7 +80,7 @@ export default function AsistenteChat({ rol }: { rol?: string }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, fontSize: '0.9rem' }}>
               <Bot size={16} />
-              Asistente ComercioPro
+              Asistente Kontia
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -96,7 +96,7 @@ export default function AsistenteChat({ rol }: { rol?: string }) {
                 key={i}
                 style={{
                   alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                  backgroundColor: m.role === 'user' ? 'var(--primary, #4f46e5)' : 'var(--bg-secondary)',
+                  backgroundColor: m.role === 'user' ? 'var(--primary, #4338ca)' : 'var(--bg-secondary)',
                   color: m.role === 'user' ? '#fff' : 'inherit',
                   padding: '0.55rem 0.75rem',
                   borderRadius: '0.75rem',
@@ -142,7 +142,7 @@ export default function AsistenteChat({ rol }: { rol?: string }) {
           width: '52px',
           height: '52px',
           borderRadius: '50%',
-          backgroundColor: 'var(--primary, #4f46e5)',
+          backgroundColor: 'var(--primary, #4338ca)',
           color: '#fff',
           border: 'none',
           cursor: 'pointer',

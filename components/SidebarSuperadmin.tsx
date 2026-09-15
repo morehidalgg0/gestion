@@ -33,7 +33,7 @@ export default function SidebarSuperadmin() {
   return (
     <aside className="sidebar" style={{ borderRight: '2px solid #ef4444' }}>
       <div className="sidebar-logo" style={{ color: '#ef4444' }}>
-        ◼ ComercioPro Admin
+        ◼ Kontia Admin
       </div>
 
       <nav className="sidebar-nav">

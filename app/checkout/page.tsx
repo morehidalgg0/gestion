@@ -88,7 +88,7 @@ export default function CheckoutPage() {
       {/* Top Navbar */}
       <header className="navbar" style={{ padding: '0 3rem' }}>
         <div className="sidebar-logo" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>
-          ◼ ComercioPro
+          ◼ Kontia
         </div>
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
@@ -167,7 +167,7 @@ export default function CheckoutPage() {
                     gap: '0.6rem',
                     fontSize: '0.95rem'
                   }}>
-                    <li>✔️ {isFree ? 'Acceso de prueba por 7 días' : 'Acceso mensual a ComercioPro'}</li>
+                    <li>✔️ {isFree ? 'Acceso de prueba por 7 días' : 'Acceso mensual a Kontia'}</li>
                     <li>✔️ Punto de venta, stock, caja y comprobantes</li>
                     <li>✔️ Las restricciones se definirán más adelante</li>
                   </ul>

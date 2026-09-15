@@ -6,12 +6,12 @@
   --bg-secondary: #ffffff;
   --bg-tertiary: #eef2f7;
   
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #eff6ff;
-  
-  --secondary: #4f46e5;
-  --secondary-hover: #4338ca;
+  --primary: #4338ca;
+  --primary-hover: #3730a3;
+  --primary-light: #eeedfe;
+
+  --secondary: #7c3aed;
+  --secondary-hover: #6d28d9;
   
   --accent: #06b6d4;
   --accent-light: #ecfeff;
@@ -541,7 +541,7 @@ a:hover {
 .pos-cart-header {
   padding: 1.25rem 1.4rem;
   border-bottom: 1px solid var(--border-color);
-  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #eeedfe 0%, #ffffff 100%);
   display: flex;
   justify-content: space-between;
   align-items: center;

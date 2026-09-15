@@ -39,7 +39,7 @@ export default function SidebarRoot() {
     <aside className="sidebar" style={{ borderRight: '2px solid #7c3aed' }}>
       <div className="sidebar-logo" style={{ color: '#7c3aed' }}>
         <KeyRound size={18} style={{ marginRight: '0.4rem' }} />
-        ComercioPro Root
+        Kontia Root
       </div>
 
       <nav className="sidebar-nav">

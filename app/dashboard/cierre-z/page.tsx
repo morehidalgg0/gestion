@@ -347,7 +347,7 @@ export default function CierreZPage() {
             </div>
 
             <div className="card stat-card">
-              <div className="stat-icon" style={{ backgroundColor: '#dbeafe', color: '#1d4ed8' }}>
+              <div className="stat-icon" style={{ backgroundColor: '#eeedfe', color: '#4338ca' }}>
                 <ClipboardCheck size={22} />
               </div>
               <div className="stat-info">
